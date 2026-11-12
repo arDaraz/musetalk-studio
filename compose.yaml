@@ -1,0 +1,20 @@
+services:
+  musetalk:
+    image: musetalk:voice
+    restart: unless-stopped
+    init: true
+    gpus: all
+    mem_limit: 12g
+    memswap_limit: 12g
+    shm_size: 1g
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:7860:7860"
+    environment:
+      TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD: "1"
+      PYTHONPATH: /workspace:/workspace/musetalk/utils
+      OMP_NUM_THREADS: "2"
+    volumes:
+      - ${MUSE_WORKSPACE:?Set MUSE_WORKSPACE to the absolute runtime directory}:/workspace
+      - ${MUSE_WORKSPACE}/torch-cache:/root/.cache/torch
+      - ${MUSE_WORKSPACE}/hf-cache:/root/.cache/huggingface
+      - ${MUSE_WORKSPACE}/voice-tokenizer-cache:/root/.pkuseg

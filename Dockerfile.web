@@ -1,0 +1,4 @@
+FROM musetalk:gx10
+RUN python -m venv /opt/web && /opt/web/bin/pip install --no-cache-dir gradio==6.31.0
+ENV GRADIO_ANALYTICS_ENABLED=False
+CMD ["/opt/web/bin/python", "/workspace/webui.py"]

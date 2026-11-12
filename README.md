@@ -1,0 +1,64 @@
+# MuseTalk Studio
+
+Generate a talking portrait from a photo and audio, or type a script and use a saved voice sample.
+The browser runs on a MacBook or another client. The NVIDIA server generates speech and video.
+
+## What the page does
+
+- Upload a photo and an audio recording.
+- Paste a photo or audio file from the clipboard. Hover over the target box, then press Command+V or Ctrl+V.
+- Show a purple outline when a media box has hover or focus.
+- Replace an uploaded file by pasting another file.
+- Generate English or Arabic speech from a script with Chatterbox Multilingual and a private reference recording.
+- Generate a MuseTalk v1.5 video, show progress, and provide playback and download.
+
+Clipboard support depends on the browser providing an actual media file. Pasted text and file paths do not upload a file.
+
+## Read the code
+
+| File | Purpose |
+| --- | --- |
+| [webui.py](webui.py) | Gradio page, media conversion, job handling, progress, video generation, and CSS. |
+| [clipboard.js](clipboard.js) | Clipboard uploads, file replacement, and focus on hover. |
+| [speech.py](speech.py) | Script splitting and speech generation from a saved voice. |
+| [Dockerfile](Dockerfile) | MuseTalk inference dependencies for the NVIDIA ARM64 server. |
+| [Dockerfile.web](Dockerfile.web) | Separate Gradio environment. |
+| [Dockerfile.voice](Dockerfile.voice) | Separate Chatterbox environment with CUDA 13 PyTorch. |
+| [compose.yaml](compose.yaml) | GPU container, network binding, memory limit, and local storage. |
+| [voice-requirements.lock](voice-requirements.lock) | Installed speech package versions from the tested server, for reference. |
+
+The video engine comes from [TMElyralab/MuseTalk](https://github.com/TMElyralab/MuseTalk).
+The speech engine comes from [resemble-ai/chatterbox](https://github.com/resemble-ai/chatterbox).
+This repository contains the custom interface and deployment files. It does not include the upstream engines, model weights, or personal media.
+
+## Run it
+
+See [server setup](docs/SETUP.md) for the pinned source revision, container builds, models, and voice preparation.
+The tested system is an ARM64 NVIDIA GB10 machine with 128 GB unified memory.
+The browser can run on macOS, but these containers require a Linux NVIDIA GPU server.
+
+Qwen and vLLM are separate services. This application does not call them or change their containers.
+It processes one video job at a time. Speech generation finishes before MuseTalk loads, which reduces concurrent model memory use.
+The Docker memory limit does not reserve or isolate GPU memory.
+
+## Data and access
+
+Uploaded media, scripts, render logs, and generated videos remain on the server.
+The application retains job output under `results/web/` until it is deleted manually.
+Initial model or tokenizer downloads can access external model hosts.
+
+The page has no login. The Compose example binds to localhost by default.
+Use an SSH tunnel or a trusted private network to reach it from another computer.
+Keep private recordings and generated output outside Git.
+
+## Verification
+
+The deployed source was tested with photo and audio uploads, native Mac clipboard paste, file replacement, hover focus, and video downloads.
+English and Arabic script generation also produced playable videos while a separate vLLM service remained running.
+The public package changes the saved-voice display text and makes the Compose paths configurable.
+A clean installation from this repository has not yet been tested.
+
+## Third-party terms
+
+MuseTalk, Chatterbox, the NVIDIA base image, and downloaded models retain their own licenses and terms.
+Review the upstream terms before redistributing those components or their weights.
