@@ -2,12 +2,14 @@ import io
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 import wave
 from pathlib import Path
 
 from PIL import Image
 
-from webui import photo_quality, prepare_inputs
+from engine import prepare_inputs
+from webui import photo_quality
 
 
 class PhotoQualityTests(unittest.TestCase):
@@ -23,7 +25,7 @@ class PhotoQualityTests(unittest.TestCase):
                 with wave.open(str(root / 'input.wav'), 'wb') as audio:
                     audio.setparams((1, 2, 16000, 0, 'NONE', 'not compressed'))
                     audio.writeframes(bytes(3200))
-                with (root / 'prepare.log').open('w') as log:
+                with (root / 'prepare.log').open('w') as log, patch('engine.ROOT', root):
                     prepare_inputs(str(root / 'photo.png'), str(root / 'input.wav'), job, log)
                 decoded = subprocess.run([
                     'ffmpeg', '-v', 'error', '-i', str(job / 'portrait.mp4'),
