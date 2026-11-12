@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 
 import gradio as gr
+from PIL import Image
 
 ROOT = Path('/workspace')
 OUTPUTS = ROOT / 'results' / 'web'
@@ -20,8 +21,9 @@ def run_media(command, log):
 def prepare_inputs(photo, audio, job, log):
     run_media([
         'ffmpeg', '-hide_banner', '-y', '-i', photo, '-frames:v', '1',
-        '-vf', "scale='min(768,iw)':-2,pad=ceil(iw/2)*2:ceil(ih/2)*2",
-        '-r', '25', '-pix_fmt', 'yuv420p', str(job / f'{job.name}.mp4'),
+        '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2',
+        '-r', '25', '-c:v', 'libx264rgb', '-crf', '0', '-pix_fmt', 'rgb24',
+        str(job / f'{job.name}.mp4'),
     ], log)
     run_media([
         'ffmpeg', '-hide_banner', '-y', '-i', audio, '-vn', '-ac', '1',
@@ -103,6 +105,17 @@ def select_source(source):
     return gr.update(visible=source == 'Type a script'), gr.update(visible=source == 'Upload audio')
 
 
+def photo_quality(photo):
+    if not photo:
+        return ''
+    with Image.open(photo) as image:
+        width, height = image.size
+    guidance = f'Photo resolution: {width} × {height} pixels.'
+    if min(width, height) < 512:
+        guidance += ' This is a small image. Upload the original full-resolution photo for a clearer video. Enlarging this image will not restore missing detail.'
+    return guidance
+
+
 def clipboard_target(kind, label):
     gr.HTML(
         f'<div class="clipboard-target" data-clipboard-kind="{kind}" tabindex="0" '
@@ -116,6 +129,7 @@ with gr.Blocks(title='MuseTalk') as app:
     with gr.Row():
         with gr.Column():
             photo_input = gr.Image(label='Your photo', type='filepath', sources=['upload'], height=340, elem_id='photo-input')
+            photo_guidance = gr.Markdown()
             clipboard_target('image', 'Photo')
             source_input = gr.Radio(['Type a script', 'Upload audio'], value='Type a script', label='Speech source')
             with gr.Group() as script_group:
@@ -129,6 +143,7 @@ with gr.Blocks(title='MuseTalk') as app:
         with gr.Column():
             video = gr.Video(label='Generated video', interactive=False, height=460)
             status = gr.Textbox(label='Status', interactive=False)
+    photo_input.change(photo_quality, inputs=photo_input, outputs=photo_guidance, queue=False)
     source_input.change(select_source, inputs=source_input, outputs=[script_group, upload_group], queue=False)
     generate_button.click(
         generate, inputs={photo_input, source_input, script_input, language_input, audio_input},

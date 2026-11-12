@@ -9,11 +9,14 @@ git clone https://github.com/arDaraz/musetalk-studio.git "$HOME/musetalk-studio"
 export STUDIO_DIR="$HOME/musetalk-studio"
 git clone https://github.com/TMElyralab/MuseTalk.git "$STUDIO_DIR/runtime"
 git -C "$STUDIO_DIR/runtime" checkout 0a89dec45a0192b824e3cf4daf96c239440c5ed8
+git -C "$STUDIO_DIR/runtime" apply --check --unidiff-zero "$STUDIO_DIR/patches/inference-video-copy.patch"
+git -C "$STUDIO_DIR/runtime" apply --unidiff-zero "$STUDIO_DIR/patches/inference-video-copy.patch"
 cp "$STUDIO_DIR/webui.py" "$STUDIO_DIR/clipboard.js" "$STUDIO_DIR/speech.py" "$STUDIO_DIR/runtime/"
 ```
 
 The application uses `/workspace` inside the container. Compose mounts the runtime directory at that path.
 The upstream checkout supplies `scripts/inference.py` and the `musetalk` package.
+The patch preserves the encoded video stream when adding audio. Apply it once to the pinned upstream revision.
 
 ## Build the images
 
@@ -97,9 +100,23 @@ Hover over either upload box before pasting media. Clicking the box still opens 
 Each job writes to `results/web/<job-id>/`. The output video is `v15/video.mp4`.
 The job directory also contains `render.log` and, for script mode, the submitted script and generated speech.
 
-Use a clear portrait with one visible face. Start with a short clip to check memory use alongside other GPU services.
+Use the original full-resolution portrait with one visible face. The page shows its dimensions and flags images with a side smaller than 512 pixels.
+Preparation preserves RGB pixels and image dimensions, adding at most one pixel of padding per side for video encoding.
+MuseTalk still generates a 256 by 256 face region, so a larger photo cannot remove every mouth or beard artifact.
+Start with a short clip to check memory use alongside other GPU services.
 The interface does not impose a script length limit or delete old jobs automatically.
 The queue allows one video job at a time, but other containers can still compete for GPU memory.
 
 To update the interface, copy the three application files into the runtime directory and restart only the Compose `musetalk` service.
 The upstream `entrypoint.sh` is not used. `Dockerfile.web` starts `/workspace/webui.py` directly.
+
+## Verify photo preparation
+
+Run the checks in the web image with the upstream runtime and this repository mounted.
+
+```bash
+docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -w /studio -e PYTHONPATH=/studio musetalk:voice /opt/web/bin/python -m unittest discover -s /studio/tests -v
+```
+
+The tests compare decoded RGB pixels with the original photo and check odd dimensions, large photos, and the small-image guidance.
+For an existing installation, apply the inference patch before restarting the web service. If the patch check reports a mismatch, inspect the upstream revision and whether the patch is already present.
