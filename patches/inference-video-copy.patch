@@ -1,5 +1,0 @@
---- a/scripts/inference.py
-+++ b/scripts/inference.py
-@@ -235 +235 @@
--            cmd_combine_audio = f"ffmpeg -y -v warning -i {audio_path} -i {temp_vid_path} {output_vid_name}"
-+            cmd_combine_audio = f"ffmpeg -y -v warning -i {audio_path} -i {temp_vid_path} -map 1:v:0 -map 0:a:0 -c:v copy -c:a aac -movflags +faststart {output_vid_name}"

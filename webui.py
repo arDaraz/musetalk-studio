@@ -45,6 +45,7 @@ def render_video(job, output, log):
         '--unet_model_path', str(ROOT / 'models/musetalkV15/unet.pth'),
         '--unet_config', str(ROOT / 'models/musetalkV15/musetalk.json'),
         '--version', 'v15', '--batch_size', '1', '--use_float16',
+        '--parsing_mode', 'mouth',
     ], log)
     video = output / 'v15' / 'video.mp4'
     if not video.is_file():

@@ -20,7 +20,7 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 | --- | --- |
 | [webui.py](webui.py) | Gradio page, media conversion, job handling, progress, video generation, and CSS. |
 | [clipboard.js](clipboard.js) | Clipboard uploads, file replacement, and focus on hover. |
-| [patches/inference-video-copy.patch](patches/inference-video-copy.patch) | Avoids a second video encoding when adding audio. |
+| [patches/portrait-quality.patch](patches/portrait-quality.patch) | Preserves the beard outside the mouth region and avoids duplicate video encoding. |
 | [speech.py](speech.py) | Script splitting and speech generation from a saved voice. |
 | [Dockerfile](Dockerfile) | MuseTalk inference dependencies for the NVIDIA ARM64 server. |
 | [Dockerfile.web](Dockerfile.web) | Separate Gradio environment. |
