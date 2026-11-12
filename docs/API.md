@@ -15,15 +15,34 @@ video, status = client.predict(
     photo=handle_file("/absolute/path/to/photo.png"),
     audio=handle_file("/absolute/path/to/audio.wav"),
     speech={"source": "audio"},
+    reference=None,
     api_name="/generate",
 )
 print(video, status)
 ```
 
 For a script, set `audio=None` and pass `speech={"source": "script", "text": "Hello", "language": "en"}`.
-Use `ar` for Arabic. Script mode uses the private reference voice already configured on the DGX.
+Use `ar` for Arabic. Script mode uses the private reference voice already configured on the DGX unless `reference` supplies an uploaded audio file.
 The returned video path points to the downloaded file on the client.
 Use `client.submit` and inspect the returned job's status for asynchronous progress, as `remote_client.py` does.
+
+## Voice cloning and audio previews
+
+Set `speech.engine` to `cosyvoice` or `chatterbox`. The default is `chatterbox`.
+CosyVoice accepts English in this app. Chatterbox accepts English and Arabic.
+Set `speech.transcript` to the exact words in the reference recording when available. CosyVoice uses zero-shot inference with that transcript and cross-lingual inference without it.
+Upload a 3 to 30 second reference with `handle_file`, or send `None` to use the saved voice.
+
+```python
+audio, status = client.predict(
+    speech={"source": "script", "text": "Hello from my cloned voice.", "language": "en", "engine": "cosyvoice"},
+    reference=handle_file("/absolute/path/to/reference.wav"),
+    api_name="/generate_voice",
+)
+```
+
+The preview endpoint needs no photo. Video and voice jobs share one queue slot so their models do not load concurrently.
+Use the same speech options and reference with `/generate` to create a video.
 
 ## HTTP requests
 
@@ -39,7 +58,8 @@ The generation API uses this sequence:
 {
   "photo": {"path": "<uploaded-photo-path>", "meta": {"_type": "gradio.FileData"}},
   "audio": {"path": "<uploaded-audio-path>", "meta": {"_type": "gradio.FileData"}},
-  "speech": {"source": "audio"}
+  "speech": {"source": "audio"},
+  "reference": null
 }
 ```
 

@@ -4,11 +4,17 @@ import subprocess
 import tempfile
 import time
 import uuid
+import wave
 from pathlib import Path
 
 
 ROOT = Path('/workspace')
 OUTPUTS = ROOT / 'results' / 'web'
+SPEECH_COMMANDS = {
+    'chatterbox': ['/opt/voice/bin/python', str(ROOT / 'speech.py')],
+    'cosyvoice': ['PYTHONPATH=/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS',
+                 '/opt/cosyvoice/bin/python', str(ROOT / 'cosy_speech.py')],
+}
 
 
 def run_media(command, log):
@@ -61,23 +67,43 @@ def validate_request(request):
         raise ValueError('Upload an audio recording.')
 
 
+def prepare_reference(request, output, log):
+    reference = request.get('reference') or str(ROOT / 'voices/badr.wav')
+    normalized = output / 'reference.wav'
+    run_media(['ffmpeg', '-hide_banner', '-y', '-i', reference, '-vn', '-ac', '1',
+               '-ar', '24000', '-t', '31', str(normalized)], log)
+    with wave.open(str(normalized)) as audio:
+        duration = audio.getnframes() / audio.getframerate()
+    if not 3 <= duration <= 30:
+        raise ValueError('Use a reference recording between 3 and 30 seconds long.')
+    return str(normalized)
+
+
 def speech_audio(request, output, log):
     if request['source'] == 'audio':
         return request['audio']
     script_file = output / 'script.json'
     script_file.write_text(json.dumps({
-        'text': request['text'].strip(),
-        'language': request['language'],
+        'text': request['text'].strip(), 'language': request['language'],
+        'reference': prepare_reference(request, output, log),
+        'transcript': request.get('transcript', '').strip(),
     }, ensure_ascii=False))
-    run_media(['env', '-u', 'LD_LIBRARY_PATH', '/opt/voice/bin/python', str(ROOT / 'speech.py'), str(script_file)], log)
+    command = SPEECH_COMMANDS[request.get('engine', 'chatterbox')]
+    run_media(['env', '-u', 'LD_LIBRARY_PATH', *command, str(script_file)], log)
     return str(output / 'voice.wav')
+
+
+def create_voice(request, output, progress):
+    progress(0.1, desc='Generating speech in your cloned voice')
+    with (output / 'render.log').open('w') as log:
+        return speech_audio(request, output, log)
 
 
 def create_video(request, output, progress):
     with tempfile.TemporaryDirectory(prefix='portrait-', dir=ROOT) as directory:
         with (output / 'render.log').open('w') as log:
             job = Path(directory)
-            progress(0.1, desc='Preparing speech in your saved voice' if request['source'] == 'script' else 'Preparing audio')
+            progress(0.1, desc='Preparing speech in your cloned voice' if request['source'] == 'script' else 'Preparing audio')
             audio_path = speech_audio(request, output, log)
             progress(0.4, desc='Preparing your photo')
             prepare_inputs(request['photo'], audio_path, job, log)
@@ -85,16 +111,26 @@ def create_video(request, output, progress):
             return render_video(job, output, log)
 
 
-def generate(request, progress):
-    validate_request(request)
+def run_generation(request, renderer, progress):
     started = time.monotonic()
     output = OUTPUTS / uuid.uuid4().hex
     output.mkdir(parents=True)
     try:
-        video_path = create_video(request, output, progress)
+        media_path = renderer(request, output, progress)
     except subprocess.CalledProcessError as error:
         logging.exception('Generation failed. See %s', output / 'render.log')
         raise RuntimeError('Generation failed. Check your inputs and try again. The server saved a log for this job.') from error
-    progress(1, desc='Video ready')
-    return video_path, f'Ready in {time.monotonic() - started:.0f} seconds. Use the download button on the video to save it.'
+    progress(1, desc='Ready')
+    return media_path, f'Ready in {time.monotonic() - started:.0f} seconds. Use the download button to save it.'
 
+
+
+def generate(request, progress):
+    validate_request(request)
+    return run_generation(request, create_video, progress)
+
+
+def generate_voice(request, progress):
+    if not request['text'].strip():
+        raise ValueError('Type the script you want your voice to say.')
+    return run_generation(request, create_voice, progress)

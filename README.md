@@ -9,7 +9,8 @@ The web app runs locally on your MacBook. It calls the NVIDIA server over HTTP t
 - Paste a photo or audio file from the clipboard. Hover over the target box, then press Command+V or Ctrl+V.
 - Show a purple outline when a media box has hover or focus.
 - Replace an uploaded file by pasting another file.
-- Generate English or Arabic speech from a script with Chatterbox Multilingual and a private reference recording.
+- Clone a voice with CosyVoice 3 for English, or Chatterbox for English and Arabic.
+- Upload a reference recording or use the saved voice, then preview and download speech before making a video.
 - Generate a MuseTalk v1.5 video, show progress, and provide playback and download.
 
 Clipboard support depends on the browser providing an actual media file. Pasted text and file paths do not upload a file.
@@ -24,7 +25,9 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 | [engine.py](engine.py) | Server media preparation, speech subprocess, and video generation. |
 | [clipboard.js](clipboard.js) | Clipboard uploads, file replacement, and focus on hover. |
 | [patches/portrait-quality.patch](patches/portrait-quality.patch) | Preserves the beard outside the mouth region and avoids duplicate video encoding. |
-| [speech.py](speech.py) | Script splitting and speech generation from a saved voice. |
+| [speech.py](speech.py) | Chatterbox speech generation from a reference voice. |
+| [cosy_speech.py](cosy_speech.py) | CosyVoice speech generation with optional reference transcript. |
+| [Dockerfile.cosyvoice](Dockerfile.cosyvoice) | Isolated CosyVoice environment on the NVIDIA ARM64 server. |
 | [Dockerfile](Dockerfile) | MuseTalk inference dependencies for the NVIDIA ARM64 server. |
 | [Dockerfile.web](Dockerfile.web) | Separate Gradio environment. |
 | [Dockerfile.voice](Dockerfile.voice) | Separate Chatterbox environment with CUDA 13 PyTorch. |
@@ -32,7 +35,7 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 | [voice-requirements.lock](voice-requirements.lock) | Installed speech package versions from the tested server, for reference. |
 
 The video engine comes from [TMElyralab/MuseTalk](https://github.com/TMElyralab/MuseTalk).
-The speech engine comes from [resemble-ai/chatterbox](https://github.com/resemble-ai/chatterbox).
+The speech engines come from [resemble-ai/chatterbox](https://github.com/resemble-ai/chatterbox) and [QwenAudio/CosyVoice](https://github.com/QwenAudio/CosyVoice).
 This repository contains the custom interface and deployment files. It does not include the upstream engines, model weights, or personal media.
 
 ## Run it
@@ -47,9 +50,9 @@ The Docker memory limit does not reserve or isolate GPU memory.
 
 ## Data and access
 
-The local app temporarily caches uploads, then sends the selected photo and audio or script to the configured server.
-The server retains render logs, scripts, generated speech, and videos under `results/web/`.
-The local app downloads finished videos to `~/Library/Application Support/MuseTalk Studio/results/`.
+The local app temporarily caches uploads, then sends the selected photo, reference recording, and audio or script to the configured server.
+The server retains reference recordings, render logs, scripts, generated speech, and videos under `results/web/`.
+The local app downloads generated audio and videos to `~/Library/Application Support/MuseTalk Studio/results/`.
 Set `MUSE_OUTPUT_DIR` to choose another download directory. Neither service deletes old job output automatically.
 Initial model or tokenizer downloads can access external model hosts.
 
@@ -61,10 +64,11 @@ Keep private recordings and generated output outside Git.
 
 The deployed source was tested with photo and audio uploads, native Mac clipboard paste, file replacement, hover focus, and video downloads.
 English and Arabic script generation also produced playable videos while a separate vLLM service remained running.
-The split deployment also has API validation and file-transfer tests. Run instructions are in the setup guide.
+CosyVoice cloning was verified through the local page with an uploaded reference, audio playback, video generation, and reference clipboard paste.
+API validation, reference-duration boundaries, and file-transfer tests also passed. Run instructions are in the setup guide.
 A clean installation from this repository has not yet been tested.
 
 ## Third-party terms
 
-MuseTalk, Chatterbox, the NVIDIA base image, and downloaded models retain their own licenses and terms.
+MuseTalk, Chatterbox, CosyVoice, the NVIDIA base image, and downloaded models retain their own licenses and terms.
 Review the upstream terms before redistributing those components or their weights.

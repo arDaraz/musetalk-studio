@@ -1,6 +1,6 @@
 services:
   musetalk:
-    image: musetalk:voice
+    image: musetalk:cosyvoice
     command: ["/opt/web/bin/python", "/workspace/backend.py"]
     restart: unless-stopped
     init: true
