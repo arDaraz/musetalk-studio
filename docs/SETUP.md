@@ -11,12 +11,12 @@ git clone https://github.com/TMElyralab/MuseTalk.git "$STUDIO_DIR/runtime"
 git -C "$STUDIO_DIR/runtime" checkout 0a89dec45a0192b824e3cf4daf96c239440c5ed8
 git -C "$STUDIO_DIR/runtime" apply --check --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
 git -C "$STUDIO_DIR/runtime" apply --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
-cp "$STUDIO_DIR/backend.py" "$STUDIO_DIR/engine.py" "$STUDIO_DIR/photo_detail.py" "$STUDIO_DIR/speech.py" "$STUDIO_DIR/cosy_speech.py" "$STUDIO_DIR/runtime/"
+cp "$STUDIO_DIR/backend.py" "$STUDIO_DIR/engine.py" "$STUDIO_DIR/photo_detail.py" "$STUDIO_DIR/mouth_restore.py" "$STUDIO_DIR/speech.py" "$STUDIO_DIR/cosy_speech.py" "$STUDIO_DIR/runtime/"
 ```
 
 The application uses `/workspace` inside the container. Compose mounts the runtime directory at that path.
 The upstream checkout supplies `scripts/inference.py` and the `musetalk` package.
-The patch makes `scripts/inference.py` call `photo_detail.py` for a single photo, saves the face width for the status message, encodes the video at a higher quality, and keeps the encoded video stream when it adds audio. Apply it once to the pinned upstream revision.
+The patch makes `scripts/inference.py` call `photo_detail.py` and `mouth_restore.py` for a single photo, saves the face width for the status message, encodes the video at a higher quality, and keeps the encoded video stream when it adds audio. Apply it once to the pinned upstream revision.
 
 ## Build the images
 
@@ -52,6 +52,9 @@ huggingface-cli download yzd-v/DWPose --local-dir /workspace/models/dwpose --inc
 mkdir -p /workspace/models/face-parse-bisent
 gdown 154JgKpzCPW82qINcVieuPH3fZ2e0P812 -O /workspace/models/face-parse-bisent/79999_iter.pth
 curl --fail -L https://download.pytorch.org/models/resnet18-5c106cde.pth -o /workspace/models/face-parse-bisent/resnet18-5c106cde.pth
+mkdir -p /workspace/models/gfpgan
+curl --fail -L https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth -o /workspace/models/gfpgan/GFPGANv1.4.pth
+echo 'e2cd4703ab14f4d01fd1383a8a8b266f9a5833dacee8e6a79d3bf21a1b6be5ad  /workspace/models/gfpgan/GFPGANv1.4.pth' | sha256sum --check
 /opt/voice/bin/hf download ResembleAI/chatterbox --revision 5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18 --local-dir /workspace/models/chatterbox --include ve.pt t3_mtl23ls_v3.safetensors s3gen.pt grapheme_mtl_merged_expanded_v1.json conds.pt Cangjie5_TC.json
 /opt/cosyvoice/bin/python -c "from huggingface_hub import snapshot_download; snapshot_download('FunAudioLLM/Fun-CosyVoice3-0.5B-2512', revision='29e01c4e8d000f4bcd70751be16fa94bf3d85a18', local_dir='/workspace/models/cosyvoice3', allow_patterns=['CosyVoice-BlankEN/*', 'cosyvoice3.yaml', 'campplus.onnx', 'speech_tokenizer_v3.onnx', 'llm.pt', 'flow.pt', 'hift.pt'])"
 /opt/cosyvoice/bin/python -c "import whisper; whisper.load_model('base', device='cpu', download_root='/workspace/models/whisper-asr')"
@@ -148,13 +151,14 @@ Preparation preserves the RGB pixels of a photo whose shorter side is at least 7
 Preparation enlarges a smaller photo by a whole factor until its shorter side is at least 720 pixels. The enlarged frame keeps more of the mouth that MuseTalk paints, but it adds no detail to the photo.
 MuseTalk repaints the lower half of the face at 256 by 256 pixels, which softens beard and skin texture.
 `photo_detail.py` measures how each part of the generated face moves and moves the photo detail with it. The beard, the skin, and the lips stay as sharp as the photo while the mouth moves.
-The inside of an open mouth, which includes the teeth, stays as soft as the model output. The head does not move.
+`mouth_restore.py` sharpens the lips and the inside of the mouth with GFPGAN v1.4, loaded through `spandrel`. It uses only the fine detail of the restored face, and only where GFPGAN kept the shape of the mouth, so the mouth opening and the lip color stay as generated.
+The restoration adds about 0.1 second for each video frame. The head does not move.
 A face narrower than 256 pixels gives the model little mouth detail, so the lips look less exact. The status message then reports the face width and asks for a larger photo.
 Start with a short clip to check memory use alongside other GPU services.
 The interface does not impose a script length limit or delete old jobs automatically.
 The queue allows one video job at a time, but other containers can still compete for GPU memory.
 
-To update the server, copy `backend.py`, `engine.py`, `photo_detail.py`, `speech.py`, and `cosy_speech.py` into the runtime directory and recreate only the Compose `musetalk` service.
+To update the server, copy `backend.py`, `engine.py`, `photo_detail.py`, `mouth_restore.py`, `speech.py`, and `cosy_speech.py` into the runtime directory and recreate only the Compose `musetalk` service.
 To update the Mac, copy `webui.py`, `remote_client.py`, and `clipboard.js` into its app directory and restart the local process.
 The upstream `entrypoint.sh` is not used. The container starts `/workspace/backend.py`.
 
@@ -181,13 +185,14 @@ Run the CosyVoice prompt tests in its speech environment.
 docker run --rm -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/studio:/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS musetalk:cosyvoice env -u LD_LIBRARY_PATH /opt/cosyvoice/bin/python -m unittest discover -s /studio/tests -p test_cosy_speech.py -v
 ```
 
-Run the photo-detail tests in the inference environment.
+Run the photo-detail and mouth-restoration tests in the inference environment.
 
 ```bash
 docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/studio musetalk:cosyvoice /usr/bin/python -m unittest discover -s /studio/tests -p test_photo_detail.py -v
+docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/studio musetalk:cosyvoice /usr/bin/python -m unittest discover -s /studio/tests -p test_mouth_restore.py -v
 ```
 
-To upgrade an installation with an earlier portrait patch, restore the two upstream files and apply the current patch. Then restart the service.
+To upgrade an installation with an earlier portrait patch, rebuild the `musetalk:cosyvoice` image, download the GFPGAN weights as shown above, and copy the server files. Then restore the two upstream files, apply the current patch, and recreate the service.
 
 ```bash
 git -C "$STUDIO_DIR/runtime" checkout 0a89dec45a0192b824e3cf4daf96c239440c5ed8 -- scripts/inference.py musetalk/utils/face_parsing/__init__.py

@@ -25,7 +25,8 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 | [engine.py](engine.py) | Server media preparation, speech subprocess, and video generation. |
 | [clipboard.js](clipboard.js) | Clipboard uploads, file replacement, and focus on hover. |
 | [photo_detail.py](photo_detail.py) | Moves the photo detail with the generated face, so the beard and the lips stay sharp. |
-| [patches/portrait-quality.patch](patches/portrait-quality.patch) | Calls `photo_detail.py` from the upstream inference script, raises the video encoding quality, and avoids duplicate video encoding. |
+| [mouth_restore.py](mouth_restore.py) | Sharpens the lips and the inside of the mouth with GFPGAN detail. |
+| [patches/portrait-quality.patch](patches/portrait-quality.patch) | Calls `photo_detail.py` and `mouth_restore.py` from the upstream inference script, raises the video encoding quality, and avoids duplicate video encoding. |
 | [speech.py](speech.py) | Chatterbox speech generation from a reference voice. |
 | [cosy_speech.py](cosy_speech.py) | CosyVoice speech generation with automatic reference transcription. |
 | [Dockerfile.cosyvoice](Dockerfile.cosyvoice) | Isolated CosyVoice environment on the NVIDIA ARM64 server. |
@@ -71,5 +72,5 @@ A clean installation from this repository has not yet been tested.
 
 ## Third-party terms
 
-MuseTalk, Chatterbox, CosyVoice, the NVIDIA base image, and downloaded models retain their own licenses and terms.
+MuseTalk, Chatterbox, CosyVoice, GFPGAN, the NVIDIA base image, and downloaded models retain their own licenses and terms.
 Review the upstream terms before redistributing those components or their weights.
