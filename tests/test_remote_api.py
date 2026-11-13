@@ -24,10 +24,11 @@ class BackendContractTests(unittest.TestCase):
         progress = Mock()
         with patch('backend.engine.generate', return_value=('video.mp4', 'Ready')) as generate:
             output = backend.generate('photo.png', None,
-                                      {'source': 'script', 'text': 'مرحبا', 'language': 'ar'}, progress)
+                                      {'source': 'script', 'text': 'مرحبا', 'language': 'ar'}, progress=progress)
         self.assertEqual(output, ('video.mp4', 'Ready'))
         self.assertEqual(generate.call_args.args[0], {
-            'photo': 'photo.png', 'audio': None, 'source': 'script', 'text': 'مرحبا', 'language': 'ar',
+            'photo': 'photo.png', 'audio': None, 'reference': None, 'source': 'script',
+            'text': 'مرحبا', 'language': 'ar', 'engine': 'chatterbox',
         })
         self.assertIs(generate.call_args.args[1], progress)
 
@@ -67,13 +68,17 @@ class RemoteClientTests(unittest.TestCase):
             progress = Mock()
             speech = {'source': 'audio'}
             with patch('remote_client.get_client', return_value=client), patch('remote_client.time.sleep'):
-                output = remote_client.generate_remote(str(photo), str(audio), speech, progress)
+                output = remote_client.generate_remote({'endpoint': '/generate', 'inputs': {
+                    'photo': str(photo), 'audio': str(audio), 'speech': speech, 'reference': None,
+                }}, progress)
             self.assertEqual(output, job.result.return_value)
-            submitted_photo, submitted_audio, submitted_speech = client.submit.call_args.args
+            submitted = client.submit.call_args.kwargs
+            submitted_photo, submitted_audio, submitted_speech = submitted['photo'], submitted['audio'], submitted['speech']
             self.assertEqual(submitted_photo['path'], str(photo))
             self.assertEqual(submitted_audio['path'], str(audio))
             self.assertEqual(submitted_speech, speech)
-            self.assertEqual(client.submit.call_args.kwargs, {'api_name': '/generate'})
+            self.assertEqual(submitted['api_name'], '/generate')
+            self.assertIsNone(submitted['reference'])
             progress.assert_any_call(0.5, desc='Generating on DGX')
 
 

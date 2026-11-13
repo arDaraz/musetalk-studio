@@ -1,0 +1,8 @@
+FROM musetalk:voice
+RUN cp -a /opt/voice /opt/cosyvoice
+COPY cosyvoice-requirements.txt /tmp/cosyvoice-requirements.txt
+RUN /opt/cosyvoice/bin/python -m pip install --no-cache-dir -r /tmp/cosyvoice-requirements.txt
+RUN git clone --recursive https://github.com/QwenAudio/CosyVoice.git /opt/CosyVoice && git -C /opt/CosyVoice checkout 074ca6dc9e80a2f424f1f74b48bdd7d3fea531cc && git -C /opt/CosyVoice submodule update --init --recursive
+COPY patches/cosyvoice-audio.patch /tmp/cosyvoice-audio.patch
+RUN git -C /opt/CosyVoice apply --check /tmp/cosyvoice-audio.patch && git -C /opt/CosyVoice apply /tmp/cosyvoice-audio.patch
+RUN /opt/cosyvoice/bin/python -m pip uninstall -y chatterbox-tts && /opt/cosyvoice/bin/python -m pip install --no-cache-dir gdown==5.1.0 wget==3.2

@@ -25,23 +25,29 @@ def get_client():
         raise RuntimeError('Cannot reach the DGX. Check Tailscale and the generation service, then try again.') from error
 
 
-def generate_remote(photo, audio, speech, progress):
+def wait_for_generation(job, progress):
+    while not job.done():
+        status = job.status()
+        if status.progress_data:
+            update = status.progress_data[-1]
+            progress(update.progress, desc=update.desc)
+        elif status.code == Status.IN_QUEUE:
+            progress(None, desc='Waiting for the DGX')
+        time.sleep(0.25)
+    return job.result()
+
+
+def generate_remote(request, progress):
     progress(0, desc='Sending inputs to the DGX')
     client = get_client()
     try:
-        job = client.submit(handle_file(photo) if photo else None,
-                            handle_file(audio) if audio else None,
-                            speech, api_name='/generate')
-        while not job.done():
-            status = job.status()
-            if status.progress_data:
-                update = status.progress_data[-1]
-                progress(update.progress, desc=update.desc)
-            elif status.code == Status.IN_QUEUE:
-                progress(None, desc='Waiting for the DGX')
-            time.sleep(0.25)
-        video_path, message = job.result()
+        inputs = dict(request['inputs'])
+        for name in ('photo', 'audio', 'reference'):
+            if inputs.get(name):
+                inputs[name] = handle_file(inputs[name])
+        job = client.submit(**inputs, api_name=request['endpoint'])
+        media_path, message = wait_for_generation(job, progress)
     except (httpx.HTTPError, OSError) as error:
         raise RuntimeError('The DGX connection failed. Check Tailscale and try again.') from error
-    progress(1, desc='Video downloaded to this Mac')
-    return video_path, message
+    progress(1, desc='Downloaded to this Mac')
+    return media_path, message

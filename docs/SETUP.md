@@ -11,7 +11,7 @@ git clone https://github.com/TMElyralab/MuseTalk.git "$STUDIO_DIR/runtime"
 git -C "$STUDIO_DIR/runtime" checkout 0a89dec45a0192b824e3cf4daf96c239440c5ed8
 git -C "$STUDIO_DIR/runtime" apply --check --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
 git -C "$STUDIO_DIR/runtime" apply --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
-cp "$STUDIO_DIR/backend.py" "$STUDIO_DIR/engine.py" "$STUDIO_DIR/speech.py" "$STUDIO_DIR/runtime/"
+cp "$STUDIO_DIR/backend.py" "$STUDIO_DIR/engine.py" "$STUDIO_DIR/speech.py" "$STUDIO_DIR/cosy_speech.py" "$STUDIO_DIR/runtime/"
 ```
 
 The application uses `/workspace` inside the container. Compose mounts the runtime directory at that path.
@@ -24,9 +24,13 @@ The patch limits generated pixels to an expanded mouth region and preserves the 
 docker build -f "$STUDIO_DIR/Dockerfile" -t musetalk:gx10 "$STUDIO_DIR"
 docker build -f "$STUDIO_DIR/Dockerfile.web" -t musetalk:web "$STUDIO_DIR"
 docker build -f "$STUDIO_DIR/Dockerfile.voice" -t musetalk:voice "$STUDIO_DIR"
+docker build -f "$STUDIO_DIR/Dockerfile.cosyvoice" -t musetalk:cosyvoice "$STUDIO_DIR"
 ```
 
-MMCV compilation can take time. The three images keep the inference, web, and speech dependencies separate.
+MMCV compilation can take time. The images keep video, web, Chatterbox, and CosyVoice dependencies in separate Python environments.
+CosyVoice copies the tested Chatterbox environment before installing its own package versions. This reuses CUDA packages without modifying Chatterbox.
+The CosyVoice source is pinned in `Dockerfile.cosyvoice`. Its audio patch uses SoundFile because TorchAudio 2.9 changed file decoding to TorchCodec.
+ONNX reference-audio processing uses the CPU package. The speech model runs on the GPU with plain PyTorch.
 The speech subprocess removes `LD_LIBRARY_PATH` so the base image's PyTorch libraries do not override its own CUDA libraries.
 The package snapshot in `voice-requirements.lock` records the tested speech environment. The Dockerfile installs the dependencies, and some transitive versions are not pinned.
 
@@ -35,7 +39,7 @@ The package snapshot in `voice-requirements.lock` records the tested speech envi
 Start a temporary shell with the runtime directory mounted.
 
 ```bash
-docker run --rm -it -v "$STUDIO_DIR/runtime:/workspace" musetalk:voice bash
+docker run --rm -it -v "$STUDIO_DIR/runtime:/workspace" musetalk:cosyvoice bash
 ```
 
 Run these commands inside that container.
@@ -49,6 +53,8 @@ mkdir -p /workspace/models/face-parse-bisent
 gdown 154JgKpzCPW82qINcVieuPH3fZ2e0P812 -O /workspace/models/face-parse-bisent/79999_iter.pth
 curl --fail -L https://download.pytorch.org/models/resnet18-5c106cde.pth -o /workspace/models/face-parse-bisent/resnet18-5c106cde.pth
 /opt/voice/bin/hf download ResembleAI/chatterbox --revision 5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18 --local-dir /workspace/models/chatterbox --include ve.pt t3_mtl23ls_v3.safetensors s3gen.pt grapheme_mtl_merged_expanded_v1.json conds.pt Cangjie5_TC.json
+/opt/cosyvoice/bin/python -c "from huggingface_hub import snapshot_download; snapshot_download('FunAudioLLM/Fun-CosyVoice3-0.5B-2512', revision='29e01c4e8d000f4bcd70751be16fa94bf3d85a18', local_dir='/workspace/models/cosyvoice3', allow_patterns=['CosyVoice-BlankEN/*', 'cosyvoice3.yaml', 'campplus.onnx', 'speech_tokenizer_v3.onnx', 'llm.pt', 'flow.pt', 'hift.pt'])"
+/opt/cosyvoice/bin/python -c "import whisper; whisper.load_model('base', device='cpu', download_root='/workspace/models/whisper-asr')"
 exit
 ```
 
@@ -58,7 +64,8 @@ Model hosts can require access approval or authentication under their own terms.
 ## Prepare a private reference voice
 
 Copy a clear recording onto the server. Convert a clean segment of about 10 seconds to mono, 24 kHz WAV.
-The current code reads `voices/badr.wav`. This is a fixed filename, and the repository includes no recording.
+When the user uploads no reference, the code reads `voices/badr.wav`. The repository includes no recording.
+Uploaded references apply to the current request and do not replace the saved voice.
 
 ```bash
 mkdir -p "$STUDIO_DIR/runtime/voices"
@@ -117,11 +124,23 @@ Open [the local page](http://127.0.0.1:7860) on the MacBook.
 Upload a clear portrait, select an audio recording or enter a short script, and select **Generate video**.
 Hover over either upload box before pasting media. Clicking the box still opens the file picker.
 
+## Clone and preview a voice
+
+Choose **Type a script**, then select **CosyVoice 3** or **Chatterbox** as the voice engine.
+Use a clear recording between 3 and 30 seconds long with one speaker. Upload it under **Reference voice**, or leave the field empty to use the saved voice.
+CosyVoice uses the first five seconds of the reference recording. Start the recording with clear speech. Longer prompts caused omitted or repeated words in testing.
+The server transcribes that clip with Whisper base, then uses zero-shot inference at full precision. Enter only the new words in **Script**. No reference transcript is needed.
+The first CosyVoice request downloads Whisper base to `models/whisper-asr` if it is missing. Recordings stay on the server. A reference with no recognized speech stops generation with an error.
+Enter the new script, then select **Generate voice preview**. No photo is needed for an audio preview.
+Play or download the generated audio. To make a talking video, upload a photo and select **Generate video**.
+CosyVoice supports English in this app. Use Chatterbox for Arabic, which is outside CosyVoice's documented language list.
+Reference uploads support the same hover-and-paste interaction as the other media boxes.
+
 ## Outputs and limits
 
 Each server job writes to `results/web/<job-id>/`. The output video is `v15/video.mp4`.
-The Mac downloads completed videos to `~/Library/Application Support/MuseTalk Studio/results/`, or the directory in `MUSE_OUTPUT_DIR`.
-The job directory also contains `render.log` and, for script mode, the submitted script and generated speech.
+The Mac downloads generated audio and videos to `~/Library/Application Support/MuseTalk Studio/results/`, or the directory in `MUSE_OUTPUT_DIR`.
+The job directory also contains `render.log` and, for script mode, the submitted script, normalized reference recording, and generated speech.
 
 Use the original full-resolution portrait with one visible face. The page shows its dimensions and flags images with a side smaller than 512 pixels.
 Preparation preserves RGB pixels and image dimensions, adding at most one pixel of padding per side for video encoding.
@@ -131,7 +150,7 @@ Start with a short clip to check memory use alongside other GPU services.
 The interface does not impose a script length limit or delete old jobs automatically.
 The queue allows one video job at a time, but other containers can still compete for GPU memory.
 
-To update the server, copy `backend.py`, `engine.py`, and `speech.py` into the runtime directory and recreate only the Compose `musetalk` service.
+To update the server, copy `backend.py`, `engine.py`, `speech.py`, and `cosy_speech.py` into the runtime directory and recreate only the Compose `musetalk` service.
 To update the Mac, copy `webui.py`, `remote_client.py`, and `clipboard.js` into its app directory and restart the local process.
 The upstream `entrypoint.sh` is not used. The container starts `/workspace/backend.py`.
 
@@ -141,18 +160,25 @@ Run API boundary and connection-error checks on the Mac.
 
 ```bash
 PYTHONPATH="$STUDIO_DIR" "$STUDIO_DIR/.venv/bin/python" -m unittest discover -s "$STUDIO_DIR/tests" -p test_remote_api.py -v
+PYTHONPATH="$STUDIO_DIR" "$STUDIO_DIR/.venv/bin/python" -m unittest discover -s "$STUDIO_DIR/tests" -p test_voice_cloning.py -v
 ```
 
 Run the checks in the web image with the upstream runtime and this repository mounted.
 
 ```bash
-docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -w /studio -e PYTHONPATH=/studio musetalk:voice /opt/web/bin/python -m unittest discover -s /studio/tests -p test_photo_quality.py -v
+docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -w /studio -e PYTHONPATH=/studio musetalk:cosyvoice /opt/web/bin/python -m unittest discover -s /studio/tests -p test_photo_quality.py -v
+```
+
+Run the CosyVoice prompt tests in its speech environment.
+
+```bash
+docker run --rm -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/studio:/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS musetalk:cosyvoice env -u LD_LIBRARY_PATH /opt/cosyvoice/bin/python -m unittest discover -s /studio/tests -p test_cosy_speech.py -v
 ```
 
 Run the mouth-mask tests in the inference environment.
 
 ```bash
-docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/workspace:/workspace/musetalk/utils musetalk:voice /usr/bin/python -m unittest discover -s /studio/tests -p test_mouth_blending.py -v
+docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/workspace:/workspace/musetalk/utils musetalk:cosyvoice /usr/bin/python -m unittest discover -s /studio/tests -p test_mouth_blending.py -v
 ```
 
 The tests compare decoded RGB pixels with the original photo and check odd dimensions, large photos, and the small-image guidance.

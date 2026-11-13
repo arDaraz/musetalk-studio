@@ -24,7 +24,7 @@ def generate_speech(script_file):
         raise ValueError('The script is empty.')
     torch.set_num_threads(2)
     model = ChatterboxMultilingualTTS.from_local(ROOT / 'models/chatterbox', device='cuda', t3_model='v3')
-    model.prepare_conditionals(str(ROOT / 'voices/badr.wav'))
+    model.prepare_conditionals(script['reference'])
     with sf.SoundFile(script_file.with_name('voice.wav'), mode='w', samplerate=model.sr, channels=1) as audio:
         for index, chunk in enumerate(chunks):
             print(f'Generating speech segment {index + 1}/{len(chunks)}', flush=True)

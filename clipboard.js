@@ -10,6 +10,7 @@
         if (zone) return zone.dataset.clipboardKind;
         if (element.closest("#photo-input")) return "image";
         if (element.closest("#audio-input")) return "audio";
+        if (element.closest("#reference-input")) return "reference";
         return null;
     }
 
@@ -34,14 +35,14 @@
         const kind = pasteTarget(event.target);
         if (!kind || !event.clipboardData) return;
         const status = document.querySelector(`[data-clipboard-kind="${kind}"] [role="status"]`);
-        const files = Array.from(event.clipboardData.files).filter(file => mediaKind(file) === kind);
+        const files = Array.from(event.clipboardData.files).filter(file => mediaKind(file) === (kind === "reference" ? "audio" : kind));
         event.preventDefault();
         event.stopPropagation();
         if (files.length !== 1) {
             status.textContent = `Copy one ${kind === "image" ? "photo" : "audio file"}, then paste here. Text and file paths cannot be uploaded.`;
             return;
         }
-        const component = document.querySelector(kind === "image" ? "#photo-input" : "#audio-input");
+        const component = document.querySelector(({image: "#photo-input", audio: "#audio-input", reference: "#reference-input"})[kind]);
         const uploaded = await uploadFile(component, files[0]);
         status.textContent = uploaded
             ? "Pasted. Check the preview above. You can paste again to replace it."
@@ -49,7 +50,7 @@
     }
 
     function focusOnHover(event) {
-        const target = event.target.closest('#photo-input, #audio-input, [data-clipboard-kind]');
+        const target = event.target.closest('#photo-input, #audio-input, #reference-input, [data-clipboard-kind]');
         if (!target || event.pointerType === "touch") return;
         if (target.contains(event.relatedTarget) || target.contains(document.activeElement)) return;
         if (!target.hasAttribute("tabindex")) target.tabIndex = -1;
