@@ -86,7 +86,6 @@ def speech_audio(request, output, log):
     script_file.write_text(json.dumps({
         'text': request['text'].strip(), 'language': request['language'],
         'reference': prepare_reference(request, output, log),
-        'transcript': request.get('transcript', '').strip(),
     }, ensure_ascii=False))
     command = SPEECH_COMMANDS[request.get('engine', 'chatterbox')]
     run_media(['env', '-u', 'LD_LIBRARY_PATH', *command, str(script_file)], log)

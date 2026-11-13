@@ -28,7 +28,7 @@ class BackendContractTests(unittest.TestCase):
         self.assertEqual(output, ('video.mp4', 'Ready'))
         self.assertEqual(generate.call_args.args[0], {
             'photo': 'photo.png', 'audio': None, 'reference': None, 'source': 'script',
-            'text': 'مرحبا', 'language': 'ar', 'engine': 'chatterbox', 'transcript': '',
+            'text': 'مرحبا', 'language': 'ar', 'engine': 'chatterbox',
         })
         self.assertIs(generate.call_args.args[1], progress)
 

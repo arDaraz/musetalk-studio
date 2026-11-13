@@ -14,7 +14,7 @@ def speech_options(request):
     return {
         'source': 'script' if request[source_input] == 'Type a script' else 'audio',
         'text': request[script_input] or '', 'language': request[language_input],
-        'engine': request[engine_input], 'transcript': request[transcript_input] or '',
+        'engine': request[engine_input],
     }
 
 
@@ -42,8 +42,7 @@ def preview_voice(request, progress=gr.Progress()):
 
 def select_engine(engine, language):
     languages = [('English', 'en')] if engine == 'cosyvoice' else [('English', 'en'), ('Arabic', 'ar')]
-    return (gr.update(choices=languages, value='en' if engine == 'cosyvoice' else language),
-            gr.update(visible=engine == 'cosyvoice'))
+    return gr.update(choices=languages, value='en' if engine == 'cosyvoice' else language)
 
 
 def select_source(source):
@@ -83,9 +82,8 @@ with gr.Blocks(title='MuseTalk') as app:
                 gr.Markdown('Use your saved voice or upload a clear 3 to 30 second recording. CosyVoice supports English here. Use Chatterbox for Arabic.')
                 reference_input = gr.Audio(label='Reference voice (optional)', type='filepath', sources=['upload'], elem_id='reference-input')
                 clipboard_target('reference', 'Reference audio')
-                transcript_input = gr.Textbox(label='Reference transcript (optional)', visible=False,
-                                             placeholder='Exact words spoken in the reference recording. Leave blank if unavailable.')
-                script_input = gr.Textbox(label='Script', lines=5, placeholder='Write your script here...')
+                gr.Markdown('CosyVoice uses the first 5 seconds of your reference and transcribes it automatically. Start the recording with clear speech. In Script, enter the new words you want to hear.')
+                script_input = gr.Textbox(label='Script', lines=5, placeholder='Enter the new words you want your voice to say...')
                 language_input = gr.Dropdown([('English', 'en'), ('Arabic', 'ar')], value='en', label='Script language')
                 preview_button = gr.Button('Generate voice preview')
             with gr.Group(visible=False) as upload_group:
@@ -99,8 +97,8 @@ with gr.Blocks(title='MuseTalk') as app:
     photo_input.change(photo_quality, inputs=photo_input, outputs=photo_guidance, queue=False)
     source_input.change(select_source, inputs=source_input, outputs=[script_group, upload_group], queue=False)
     engine_input.change(select_engine, inputs=[engine_input, language_input],
-                        outputs=[language_input, transcript_input], queue=False)
-    speech_inputs = {source_input, script_input, language_input, engine_input, transcript_input, reference_input}
+                        outputs=language_input, queue=False)
+    speech_inputs = {source_input, script_input, language_input, engine_input, reference_input}
     preview_button.click(preview_voice, inputs=speech_inputs, outputs=[voice, status],
                          concurrency_id='generation', concurrency_limit=1)
     generate_button.click(

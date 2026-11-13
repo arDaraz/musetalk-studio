@@ -11,7 +11,6 @@ class SpeechOptions(BaseModel):
     text: str = ''
     language: Literal['en', 'ar'] = 'en'
     engine: Literal['chatterbox', 'cosyvoice'] = 'chatterbox'
-    transcript: str = ''
 
     @model_validator(mode='after')
     def check_voice_language(self):

@@ -30,7 +30,8 @@ Use `client.submit` and inspect the returned job's status for asynchronous progr
 
 Set `speech.engine` to `cosyvoice` or `chatterbox`. The default is `chatterbox`.
 CosyVoice accepts English in this app. Chatterbox accepts English and Arabic.
-Set `speech.transcript` to the exact words in the reference recording when available. CosyVoice uses zero-shot inference with that transcript and cross-lingual inference without it.
+CosyVoice uses the first five seconds of the reference recording and transcribes that clip on the server for zero-shot inference.
+Clients supply only the new script and the reference audio. Start the reference with clear speech.
 Upload a 3 to 30 second reference with `handle_file`, or send `None` to use the saved voice.
 
 ```python

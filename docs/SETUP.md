@@ -54,6 +54,7 @@ gdown 154JgKpzCPW82qINcVieuPH3fZ2e0P812 -O /workspace/models/face-parse-bisent/7
 curl --fail -L https://download.pytorch.org/models/resnet18-5c106cde.pth -o /workspace/models/face-parse-bisent/resnet18-5c106cde.pth
 /opt/voice/bin/hf download ResembleAI/chatterbox --revision 5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18 --local-dir /workspace/models/chatterbox --include ve.pt t3_mtl23ls_v3.safetensors s3gen.pt grapheme_mtl_merged_expanded_v1.json conds.pt Cangjie5_TC.json
 /opt/cosyvoice/bin/python -c "from huggingface_hub import snapshot_download; snapshot_download('FunAudioLLM/Fun-CosyVoice3-0.5B-2512', revision='29e01c4e8d000f4bcd70751be16fa94bf3d85a18', local_dir='/workspace/models/cosyvoice3', allow_patterns=['CosyVoice-BlankEN/*', 'cosyvoice3.yaml', 'campplus.onnx', 'speech_tokenizer_v3.onnx', 'llm.pt', 'flow.pt', 'hift.pt'])"
+/opt/cosyvoice/bin/python -c "import whisper; whisper.load_model('base', device='cpu', download_root='/workspace/models/whisper-asr')"
 exit
 ```
 
@@ -127,7 +128,9 @@ Hover over either upload box before pasting media. Clicking the box still opens 
 
 Choose **Type a script**, then select **CosyVoice 3** or **Chatterbox** as the voice engine.
 Use a clear recording between 3 and 30 seconds long with one speaker. Upload it under **Reference voice**, or leave the field empty to use the saved voice.
-With CosyVoice, an optional **Reference transcript** must match the words in that recording. Leave it blank to use cloning without a transcript.
+CosyVoice uses the first five seconds of the reference recording. Start the recording with clear speech. Longer prompts caused omitted or repeated words in testing.
+The server transcribes that clip with Whisper base, then uses zero-shot inference at full precision. Enter only the new words in **Script**. No reference transcript is needed.
+The first CosyVoice request downloads Whisper base to `models/whisper-asr` if it is missing. Recordings stay on the server. A reference with no recognized speech stops generation with an error.
 Enter the new script, then select **Generate voice preview**. No photo is needed for an audio preview.
 Play or download the generated audio. To make a talking video, upload a photo and select **Generate video**.
 CosyVoice supports English in this app. Use Chatterbox for Arabic, which is outside CosyVoice's documented language list.
@@ -164,6 +167,12 @@ Run the checks in the web image with the upstream runtime and this repository mo
 
 ```bash
 docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -w /studio -e PYTHONPATH=/studio musetalk:cosyvoice /opt/web/bin/python -m unittest discover -s /studio/tests -p test_photo_quality.py -v
+```
+
+Run the CosyVoice prompt tests in its speech environment.
+
+```bash
+docker run --rm -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/studio:/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS musetalk:cosyvoice env -u LD_LIBRARY_PATH /opt/cosyvoice/bin/python -m unittest discover -s /studio/tests -p test_cosy_speech.py -v
 ```
 
 Run the mouth-mask tests in the inference environment.

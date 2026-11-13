@@ -26,7 +26,7 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 | [clipboard.js](clipboard.js) | Clipboard uploads, file replacement, and focus on hover. |
 | [patches/portrait-quality.patch](patches/portrait-quality.patch) | Preserves the beard outside the mouth region and avoids duplicate video encoding. |
 | [speech.py](speech.py) | Chatterbox speech generation from a reference voice. |
-| [cosy_speech.py](cosy_speech.py) | CosyVoice speech generation with optional reference transcript. |
+| [cosy_speech.py](cosy_speech.py) | CosyVoice speech generation with automatic reference transcription. |
 | [Dockerfile.cosyvoice](Dockerfile.cosyvoice) | Isolated CosyVoice environment on the NVIDIA ARM64 server. |
 | [Dockerfile](Dockerfile) | MuseTalk inference dependencies for the NVIDIA ARM64 server. |
 | [Dockerfile.web](Dockerfile.web) | Separate Gradio environment. |
