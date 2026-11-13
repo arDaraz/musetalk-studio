@@ -107,8 +107,9 @@ def photo_quality(photo):
     with Image.open(photo) as image:
         width, height = image.size
     if min(width, height) < 512:
-        return warn_html(f'{width} × {height} pixels. This is a small image. Upload the original photo for a sharper '
-                         'mouth and beard. Enlarging this image will not restore missing detail.')
+        return warn_html(f'{width} × {height} pixels. This is a small image. The server enlarges the photo, but the '
+                         'lips in the video are not sharp because the photo has little mouth detail. Upload the '
+                         'original full-resolution photo for a clearer video.')
     return hint_html(f'{width} × {height} pixels.')
 
 
@@ -147,6 +148,9 @@ with gr.Blocks(title='MuseTalk') as app:
                                        height=240, elem_id='photo-input')
                 photo_guidance = gr.HTML()
                 clipboard_target('image', 'Photo')
+                hint('For the best video, use the original photo and not a screenshot. Show one face that looks at '
+                     'the camera, in even light, with the mouth closed and not covered. Make the face at least 256 '
+                     'pixels wide.')
             with gr.Column(elem_classes='card'):
                 step_title(2, 'Speech')
                 source_input = gr.Radio([('Type a script', 'script'), ('Upload a recording', 'audio')], value='script',
