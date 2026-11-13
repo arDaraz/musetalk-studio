@@ -5,7 +5,7 @@ The web app runs locally on your MacBook. It calls the NVIDIA server over HTTP t
 
 ## What the page does
 
-- Upload a photo and an audio recording. The page shows photo dimensions and flags small images.
+- Upload a photo and an audio recording. The page lists the photo requirements, shows photo dimensions, and flags small images.
 - Paste a photo or audio file from the clipboard. Hover over the target box, then press Command+V or Ctrl+V.
 - Show a purple outline when a media box has hover or focus.
 - Replace an uploaded file by pasting another file.

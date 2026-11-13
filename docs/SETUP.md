@@ -16,7 +16,7 @@ cp "$STUDIO_DIR/backend.py" "$STUDIO_DIR/engine.py" "$STUDIO_DIR/photo_detail.py
 
 The application uses `/workspace` inside the container. Compose mounts the runtime directory at that path.
 The upstream checkout supplies `scripts/inference.py` and the `musetalk` package.
-The patch makes `scripts/inference.py` call `photo_detail.py` for a single photo, encodes the video at a higher quality, and keeps the encoded video stream when it adds audio. Apply it once to the pinned upstream revision.
+The patch makes `scripts/inference.py` call `photo_detail.py` for a single photo, saves the face width for the status message, encodes the video at a higher quality, and keeps the encoded video stream when it adds audio. Apply it once to the pinned upstream revision.
 
 ## Build the images
 
@@ -142,12 +142,14 @@ Each server job writes to `results/web/<job-id>/`. The output video is `v15/vide
 The Mac downloads generated audio and videos to `~/Library/Application Support/MuseTalk Studio/results/`, or the directory in `MUSE_OUTPUT_DIR`.
 The job directory also contains `render.log` and, for script mode, the submitted script, normalized reference recording, and generated speech.
 
-Use the original full-resolution portrait with one visible face. The page shows its dimensions and flags images with a side smaller than 512 pixels.
-Preparation preserves RGB pixels and image dimensions, adding at most one pixel of padding per side for video encoding.
+Use the original full-resolution portrait with one visible face that looks at the camera, in even light, with the mouth closed and nothing over it.
+The page lists these requirements, shows the photo dimensions, and flags images with a side smaller than 512 pixels.
+Preparation preserves the RGB pixels of a photo whose shorter side is at least 720 pixels, adding at most one pixel of padding per side for video encoding.
+Preparation enlarges a smaller photo by a whole factor until its shorter side is at least 720 pixels. The enlarged frame keeps more of the mouth that MuseTalk paints, but it adds no detail to the photo.
 MuseTalk repaints the lower half of the face at 256 by 256 pixels, which softens beard and skin texture.
 `photo_detail.py` measures how each part of the generated face moves and moves the photo detail with it. The beard, the skin, and the lips stay as sharp as the photo while the mouth moves.
 The inside of an open mouth, which includes the teeth, stays as soft as the model output. The head does not move.
-A face smaller than 256 pixels gives the model little mouth detail, so the lips look less exact.
+A face narrower than 256 pixels gives the model little mouth detail, so the lips look less exact. The status message then reports the face width and asks for a larger photo.
 Start with a short clip to check memory use alongside other GPU services.
 The interface does not impose a script length limit or delete old jobs automatically.
 The queue allows one video job at a time, but other containers can still compete for GPU memory.
