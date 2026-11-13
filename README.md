@@ -5,7 +5,7 @@ The browser runs on a MacBook or another client. The NVIDIA server generates spe
 
 ## What the page does
 
-- Upload a photo and an audio recording.
+- Upload a photo and an audio recording. The page shows photo dimensions and flags small images.
 - Paste a photo or audio file from the clipboard. Hover over the target box, then press Command+V or Ctrl+V.
 - Show a purple outline when a media box has hover or focus.
 - Replace an uploaded file by pasting another file.
@@ -20,6 +20,7 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 | --- | --- |
 | [webui.py](webui.py) | Gradio page, media conversion, job handling, progress, video generation, and CSS. |
 | [clipboard.js](clipboard.js) | Clipboard uploads, file replacement, and focus on hover. |
+| [patches/portrait-quality.patch](patches/portrait-quality.patch) | Preserves the beard outside the mouth region and avoids duplicate video encoding. |
 | [speech.py](speech.py) | Script splitting and speech generation from a saved voice. |
 | [Dockerfile](Dockerfile) | MuseTalk inference dependencies for the NVIDIA ARM64 server. |
 | [Dockerfile.web](Dockerfile.web) | Separate Gradio environment. |
