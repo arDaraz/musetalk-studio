@@ -26,3 +26,4 @@ __pycache__/
 docs/qa/
 docs/implementation_notes/
 .DS_Store
+.venv/

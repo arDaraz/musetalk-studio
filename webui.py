@@ -1,105 +1,26 @@
-import json
-import logging
-import subprocess
-import tempfile
-import time
-import uuid
+import os
 from pathlib import Path
 
 import gradio as gr
+from gradio_client.exceptions import AppError
 from PIL import Image
 
-ROOT = Path('/workspace')
-OUTPUTS = ROOT / 'results' / 'web'
-OUTPUTS.mkdir(parents=True, exist_ok=True)
+from remote_client import generate_remote, OUTPUTS
 
-
-def run_media(command, log):
-    subprocess.run(command, cwd=ROOT, stdout=log, stderr=log, check=True)
-
-
-def prepare_inputs(photo, audio, job, log):
-    run_media([
-        'ffmpeg', '-hide_banner', '-y', '-i', photo, '-frames:v', '1',
-        '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2',
-        '-r', '25', '-c:v', 'libx264rgb', '-crf', '0', '-pix_fmt', 'rgb24',
-        str(job / f'{job.name}.mp4'),
-    ], log)
-    run_media([
-        'ffmpeg', '-hide_banner', '-y', '-i', audio, '-vn', '-ac', '1',
-        '-ar', '16000', str(job / 'audio.wav'),
-    ], log)
-    config = {'portrait': {
-        'video_path': str(job / f'{job.name}.mp4'),
-        'audio_path': str(job / 'audio.wav'),
-        'result_name': 'video.mp4',
-    }}
-    (job / 'config.json').write_text(json.dumps(config))
-
-
-def render_video(job, output, log):
-    run_media([
-        '/usr/bin/python', '-u', '-m', 'scripts.inference',
-        '--inference_config', str(job / 'config.json'),
-        '--result_dir', str(output),
-        '--unet_model_path', str(ROOT / 'models/musetalkV15/unet.pth'),
-        '--unet_config', str(ROOT / 'models/musetalkV15/musetalk.json'),
-        '--version', 'v15', '--batch_size', '1', '--use_float16',
-        '--parsing_mode', 'mouth',
-    ], log)
-    video = output / 'v15' / 'video.mp4'
-    if not video.is_file():
-        raise gr.Error('MuseTalk could not render this photo. Use a clear, front-facing portrait with one visible face.')
-    run_media(['ffmpeg', '-v', 'error', '-i', str(video), '-f', 'null', '-'], log)
-    return str(video)
-
-
-def validate_request(request):
-    if not request[photo_input]:
-        raise gr.Error('Upload a photo with one clear, visible face.')
-    if request[source_input] == 'Type a script':
-        if not request[script_input] or not request[script_input].strip():
-            raise gr.Error('Type the script you want your voice to say.')
-    elif not request[audio_input]:
-        raise gr.Error('Upload an audio recording.')
-
-
-def speech_audio(request, output, log):
-    if request[source_input] == 'Upload audio':
-        return request[audio_input]
-    script_file = output / 'script.json'
-    script_file.write_text(json.dumps({
-        'text': request[script_input].strip(),
-        'language': request[language_input],
-    }, ensure_ascii=False))
-    run_media(['env', '-u', 'LD_LIBRARY_PATH', '/opt/voice/bin/python', str(ROOT / 'speech.py'), str(script_file)], log)
-    return str(output / 'voice.wav')
-
-
-def create_video(request, output, progress):
-    with tempfile.TemporaryDirectory(prefix='portrait-', dir=ROOT) as directory:
-        with (output / 'render.log').open('w') as log:
-            job = Path(directory)
-            progress(0.1, desc='Preparing speech in your saved voice' if request[source_input] == 'Type a script' else 'Preparing audio')
-            audio_path = speech_audio(request, output, log)
-            progress(0.4, desc='Preparing your photo')
-            prepare_inputs(request[photo_input], audio_path, job, log)
-            progress(0.5, desc='Generating video on the GX10')
-            return render_video(job, output, log)
+ROOT = Path(__file__).resolve().parent
 
 
 def generate(request, progress=gr.Progress()):
-    validate_request(request)
-    started = time.monotonic()
-    output = OUTPUTS / uuid.uuid4().hex
-    output.mkdir()
+    speech = {
+        'source': 'script' if request[source_input] == 'Type a script' else 'audio',
+        'text': request[script_input] or '',
+        'language': request[language_input],
+    }
+    audio = request[audio_input] if speech['source'] == 'audio' else None
     try:
-        video_path = create_video(request, output, progress)
-    except subprocess.CalledProcessError as error:
-        logging.exception('Generation failed. See %s', output / 'render.log')
-        raise gr.Error('Generation failed. Check your inputs and try again. The server saved a log for this job.') from error
-    progress(1, desc='Video ready')
-    return video_path, f'Ready in {time.monotonic() - started:.0f} seconds. Use the download button on the video to save it.'
+        return generate_remote(request[photo_input], audio, speech, progress)
+    except (AppError, RuntimeError) as error:
+        raise gr.Error(str(error)) from error
 
 
 def select_source(source):
@@ -153,7 +74,7 @@ with gr.Blocks(title='MuseTalk') as app:
 
 if __name__ == '__main__':
     app.queue(default_concurrency_limit=1).launch(
-        server_name='0.0.0.0', server_port=7860,
+        server_name='127.0.0.1', server_port=int(os.environ.get('MUSE_UI_PORT', '7860')),
         theme=gr.themes.Soft(), footer_links=[],
         js=(ROOT / 'clipboard.js').read_text(),
         css="""

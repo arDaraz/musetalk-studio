@@ -1,6 +1,6 @@
-# Server setup
+# Setup
 
-These steps reproduce the layout used by the running interface. Run them on a Linux ARM64 NVIDIA GPU server with Docker Compose and NVIDIA container support.
+Set up the generation service on a Linux ARM64 NVIDIA GPU server with Docker Compose and NVIDIA container support. Then install the local Mac app below.
 
 ## Get the source
 
@@ -11,7 +11,7 @@ git clone https://github.com/TMElyralab/MuseTalk.git "$STUDIO_DIR/runtime"
 git -C "$STUDIO_DIR/runtime" checkout 0a89dec45a0192b824e3cf4daf96c239440c5ed8
 git -C "$STUDIO_DIR/runtime" apply --check --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
 git -C "$STUDIO_DIR/runtime" apply --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
-cp "$STUDIO_DIR/webui.py" "$STUDIO_DIR/clipboard.js" "$STUDIO_DIR/speech.py" "$STUDIO_DIR/runtime/"
+cp "$STUDIO_DIR/backend.py" "$STUDIO_DIR/engine.py" "$STUDIO_DIR/speech.py" "$STUDIO_DIR/runtime/"
 ```
 
 The application uses `/workspace` inside the container. Compose mounts the runtime directory at that path.
@@ -70,7 +70,7 @@ chmod 600 "$STUDIO_DIR/runtime/voices/badr.wav"
 The conversion command requires FFmpeg on the host. The container also includes FFmpeg if you prefer to convert a mounted recording there.
 Audio upload mode does not use the saved voice.
 
-## Start the page
+## Start the generation service
 
 ```bash
 cp "$STUDIO_DIR/.env.example" "$STUDIO_DIR/.env"
@@ -88,8 +88,30 @@ docker compose --env-file "$STUDIO_DIR/.env" -f "$STUDIO_DIR/compose.yaml" logs 
 For localhost binding, run this on the MacBook. Replace `user@server` with the SSH destination.
 
 ```bash
-ssh -N -L 7860:127.0.0.1:7860 user@server
+ssh -N -L 7861:127.0.0.1:7860 user@server
 ```
+
+## Run the local Mac app
+
+Install Python 3.14 and FFmpeg, then clone this repository on the Mac. Set `STUDIO_DIR` to that checkout.
+
+```bash
+export STUDIO_DIR="$HOME/musetalk-studio"
+python3.14 -m venv "$STUDIO_DIR/.venv"
+"$STUDIO_DIR/.venv/bin/python" -m pip install -r "$STUDIO_DIR/requirements-ui.txt"
+export MUSE_API_URL="http://your-dgx-host:7860"
+export GRADIO_ANALYTICS_ENABLED=False
+"$STUDIO_DIR/.venv/bin/python" "$STUDIO_DIR/webui.py"
+```
+
+Use the DGX's private network address in `MUSE_API_URL`. With the SSH tunnel above, use `http://127.0.0.1:7861` instead.
+The shell must be able to find FFmpeg. On Apple Silicon with Homebrew, include `/opt/homebrew/bin` in `PATH`.
+The app reads environment variables directly. It does not load the Compose `.env` file.
+Set `MUSE_UI_PORT` to change the local port from 7860.
+
+For automatic startup, use a macOS user LaunchAgent with the venv Python and `webui.py` as its `ProgramArguments`.
+Set `MUSE_API_URL`, `PATH`, and `GRADIO_ANALYTICS_ENABLED` in its `EnvironmentVariables`, with `RunAtLoad` and `KeepAlive` enabled.
+The local app starts even when the DGX is offline. Generation shows a connection error until the service is reachable.
 
 Open [the local page](http://127.0.0.1:7860) on the MacBook.
 Upload a clear portrait, select an audio recording or enter a short script, and select **Generate video**.
@@ -97,7 +119,8 @@ Hover over either upload box before pasting media. Clicking the box still opens 
 
 ## Outputs and limits
 
-Each job writes to `results/web/<job-id>/`. The output video is `v15/video.mp4`.
+Each server job writes to `results/web/<job-id>/`. The output video is `v15/video.mp4`.
+The Mac downloads completed videos to `~/Library/Application Support/MuseTalk Studio/results/`, or the directory in `MUSE_OUTPUT_DIR`.
 The job directory also contains `render.log` and, for script mode, the submitted script and generated speech.
 
 Use the original full-resolution portrait with one visible face. The page shows its dimensions and flags images with a side smaller than 512 pixels.
@@ -108,10 +131,17 @@ Start with a short clip to check memory use alongside other GPU services.
 The interface does not impose a script length limit or delete old jobs automatically.
 The queue allows one video job at a time, but other containers can still compete for GPU memory.
 
-To update the interface, copy the three application files into the runtime directory and restart only the Compose `musetalk` service.
-The upstream `entrypoint.sh` is not used. `Dockerfile.web` starts `/workspace/webui.py` directly.
+To update the server, copy `backend.py`, `engine.py`, and `speech.py` into the runtime directory and recreate only the Compose `musetalk` service.
+To update the Mac, copy `webui.py`, `remote_client.py`, and `clipboard.js` into its app directory and restart the local process.
+The upstream `entrypoint.sh` is not used. The container starts `/workspace/backend.py`.
 
-## Verify photo preparation
+## Verify the split and photo preparation
+
+Run API boundary and connection-error checks on the Mac.
+
+```bash
+PYTHONPATH="$STUDIO_DIR" "$STUDIO_DIR/.venv/bin/python" -m unittest discover -s "$STUDIO_DIR/tests" -p test_remote_api.py -v
+```
 
 Run the checks in the web image with the upstream runtime and this repository mounted.
 

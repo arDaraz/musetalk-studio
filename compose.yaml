@@ -1,6 +1,7 @@
 services:
   musetalk:
     image: musetalk:voice
+    command: ["/opt/web/bin/python", "/workspace/backend.py"]
     restart: unless-stopped
     init: true
     gpus: all
