@@ -5,13 +5,17 @@ The web app runs locally on your MacBook. It calls the NVIDIA server over HTTP t
 
 ## What the page does
 
-- Upload a photo and an audio recording. The page shows photo dimensions and flags small images.
+- Show the inputs as numbered cards on the left and the video on the right.
+- Upload a photo. The page shows photo dimensions and flags small images.
+- Choose the speech source. A cloned voice reads a typed script, and the video uses an uploaded recording as it is.
 - Paste a photo or audio file from the clipboard. Hover over the target box, then press Command+V or Ctrl+V.
-- Show a purple outline when a media box has hover or focus.
+- Show a teal outline when a media box has hover or focus.
 - Replace an uploaded file by pasting another file.
 - Clone a voice with CosyVoice 3 for English, or Chatterbox for English and Arabic.
-- Upload a reference recording or use the saved voice, then preview and download speech before making a video.
+- Use the saved voice or clone a reference recording. Preview and download the speech before making a video.
+- Show the script length and estimated speech duration. Flag a voice preview that no longer matches the script or voice.
 - Generate a MuseTalk v1.5 video, show progress, and provide playback and download.
+- Keep each video from the session as a take, and switch between takes.
 
 Clipboard support depends on the browser providing an actual media file. Pasted text and file paths do not upload a file.
 
@@ -19,7 +23,8 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 
 | File | Purpose |
 | --- | --- |
-| [webui.py](webui.py) | Local Gradio page, clipboard controls, photo guidance, and CSS. |
+| [webui.py](webui.py) | Local Gradio page, clipboard controls, photo guidance, voice previews, and takes. |
+| [studio.css](studio.css) | Page layout, input cards, segmented controls, and the video stage. |
 | [remote_client.py](remote_client.py) | Uploads inputs to the server, forwards progress, and downloads finished videos. |
 | [backend.py](backend.py) | Queued generation API and speech-option validation. |
 | [engine.py](engine.py) | Server media preparation, speech subprocess, and video generation. |
@@ -65,6 +70,7 @@ Keep private recordings and generated output outside Git.
 The deployed source was tested with photo and audio uploads, native Mac clipboard paste, file replacement, hover focus, and video downloads.
 English and Arabic script generation also produced playable videos while a separate vLLM service remained running.
 CosyVoice cloning was verified through the local page with an uploaded reference, audio playback, video generation, and reference clipboard paste.
+A browser check covered the card layout at desktop and phone widths, in light and dark themes. It included a voice preview, two video takes, take switching, recording mode, and the download button.
 API validation, reference-duration boundaries, and file-transfer tests also passed. Run instructions are in the setup guide.
 A clean installation from this repository has not yet been tested.
 

@@ -2,7 +2,7 @@
 
 ## Project structure
 
-- `webui.py` and `clipboard.js` implement the local Gradio interface. `remote_client.py` transfers files and calls the DGX API.
+- `webui.py`, `clipboard.js`, and `studio.css` implement the local Gradio interface. `remote_client.py` transfers files and calls the DGX API.
 - `backend.py` validates API requests. `engine.py` prepares media and coordinates speech and video generation.
 - `speech.py` runs Chatterbox. `cosy_speech.py` runs CosyVoice in a separate Python environment.
 - `tests/` contains automated checks. `patches/` holds changes to pinned upstream engines. `docs/SETUP.md` and `docs/API.md` describe installation and API usage.
