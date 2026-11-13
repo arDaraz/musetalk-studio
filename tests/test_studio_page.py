@@ -1,3 +1,4 @@
+import re
 import unittest
 from unittest.mock import patch
 
@@ -79,6 +80,17 @@ class StudioPageTests(unittest.TestCase):
             self.assertEqual(webui.continue_from_voice(page_request(source_input='audio')), {})
             self.assertEqual(webui.continue_from_script(page_request(script_input='  ')), {})
         self.assertEqual(warning.call_count, 4)
+
+    def test_camera_tips_belong_to_the_photo_step(self):
+        self.assertIn('camera-tips', webui.tips_html(webui.PHOTO))
+        self.assertNotIn('camera-tips', webui.tips_html(webui.VOICE))
+
+    def test_every_camera_button_has_a_page_action(self):
+        script = (webui.ROOT / 'studio.js').read_text()
+        handled = set(re.search(r'const photoActions = \{(.*?)\};', script).group(1).replace(' ', '').split(','))
+        handled = {entry.split(':')[0] for entry in handled}
+        buttons = set(re.findall(r'data-photo-action="(\w+)"', webui.PHOTO_ACTIONS + webui.CAMERA_PANEL))
+        self.assertEqual(buttons, handled)
 
     def test_summary_escapes_user_text(self):
         summary = webui.summary_html(page_request(script_input='<b>Hi</b>'))

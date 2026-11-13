@@ -33,6 +33,55 @@ STEP_TIPS = (
         'Each video in this session stays in Takes, so you can compare them.',
     ]),
 )
+CAMERA_TIPS = ('For a good camera photo', [
+    'Face a window or a lamp, so the light is even.', 'Put the camera at eye level.',
+    'Look into the camera, not at the screen.', 'Keep the mouth closed and not covered.',
+    'The camera turns off when you take the photo or cancel.',
+])
+
+UPLOAD_ICON = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/>'
+               '<path d="M5 20h14"/></svg>')
+CAMERA_ICON = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2'
+               'h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3.5"/></svg>')
+PHOTO_ACTIONS = (
+    '<div class="photo-actions" data-clipboard-kind="image">'
+    '<span role="status">You can also paste a photo with ⌘V or Ctrl+V.</span>'
+    '<div class="photo-buttons">'
+    f'<button type="button" class="studio-button" data-photo-action="choose">{UPLOAD_ICON}Choose a file</button>'
+    f'<button type="button" class="studio-button" data-photo-action="camera">{CAMERA_ICON}Take a photo</button>'
+    '</div></div>'
+)
+CAMERA_PANEL = (
+    '<div class="camera-panel">'
+    '<div class="viewfinder" data-show="live countdown review">'
+    '<video autoplay playsinline muted aria-label="Live camera view" data-show="live countdown"></video>'
+    '<canvas class="camera-shot" role="img" aria-label="The photo you took" data-show="review"></canvas>'
+    '<div class="face-guide" aria-hidden="true" data-show="live countdown"></div>'
+    '<span class="camera-chip live" data-show="live countdown">Live</span>'
+    '<span class="camera-chip" data-show="review">Your photo</span>'
+    '<span class="camera-hint" data-show="live">Put your face inside the oval and look at the camera</span>'
+    '<span class="countdown" role="status" aria-live="assertive" data-show="countdown"></span>'
+    '</div>'
+    '<div class="camera-controls" data-show="live countdown">'
+    '<div class="camera-options"><select aria-label="Camera"></select>'
+    '<label><input type="checkbox" checked> 3-second timer</label></div>'
+    '<div class="camera-actions">'
+    '<button type="button" class="studio-button quiet" data-photo-action="cancel">Cancel</button>'
+    f'<button type="button" class="studio-button primary" data-photo-action="shoot">{CAMERA_ICON}Take photo</button>'
+    '</div></div>'
+    '<div class="camera-controls" data-show="review">'
+    '<span class="camera-size" role="status"></span>'
+    '<div class="camera-actions">'
+    '<button type="button" class="studio-button" data-photo-action="camera">Retake</button>'
+    '<button type="button" class="studio-button primary" data-photo-action="use">Use this photo</button>'
+    '</div></div>'
+    '<div class="warn camera-error" role="alert" data-show="error"><strong></strong><span></span>'
+    '<div class="camera-controls">'
+    '<button type="button" class="studio-button primary" data-photo-action="camera">Try again</button>'
+    '<button type="button" class="studio-button" data-photo-action="cancel">Upload a photo instead</button>'
+    '</div></div>'
+    '</div>'
+)
 
 THEME = gr.themes.Base(
     primary_hue=gr.themes.colors.teal,
@@ -168,10 +217,16 @@ def summary_html(request):
     return f'<h2 class="aside-title">Your video</h2><dl class="summary">{rows}</dl>'
 
 
-def tips_html(step):
-    title, tips = STEP_TIPS[step]
+def tips_list(title, tips, kind):
     items = ''.join(f'<li>{tip}</li>' for tip in tips)
-    return f'<h2 class="aside-title">{title}</h2><ul class="tips">{items}</ul>'
+    return f'<div class="{kind}"><h2 class="aside-title">{title}</h2><ul class="tips">{items}</ul></div>'
+
+
+def tips_html(step):
+    content = tips_list(*STEP_TIPS[step], 'step-tips')
+    if step == PHOTO:
+        content += tips_list(*CAMERA_TIPS, 'camera-tips')
+    return content
 
 
 def go_to(request, step):
@@ -258,13 +313,17 @@ with gr.Blocks(title='MuseTalk') as app:
     header = gr.HTML(header_html(PHOTO, recording=False), container=False)
     with gr.Row(equal_height=False, elem_classes='studio-main'):
         with gr.Column(scale=3, min_width=420, elem_classes='step-card'):
-            with gr.Column() as photo_step:
+            with gr.Column(elem_id='photo-step') as photo_step:
                 step_heading(1, 'Add your photo',
-                             'Use one clear photo of the face. The video moves only the mouth, so the rest of the photo stays as it is.')
-                photo_input = gr.Image(label='Photo', show_label=False, type='filepath', sources=['upload'],
-                                       height=300, elem_id='photo-input')
-                clipboard_target('image', 'Photo')
-                photo_guidance = gr.HTML()
+                             'Upload, paste, or take one clear photo of the face. The video moves only the mouth, '
+                             'so the rest of the photo stays as it is.')
+                with gr.Column(elem_id='photo-zone'):
+                    photo_input = gr.Image(label='Photo', show_label=False, type='filepath', sources=['upload'],
+                                           height=260, placeholder='# Drop a photo here\nor click to choose one',
+                                           container=False, elem_id='photo-input')
+                    gr.HTML(PHOTO_ACTIONS, container=False, padding=False)
+                gr.HTML(CAMERA_PANEL, container=False, padding=False)
+                photo_guidance = gr.HTML(elem_classes='photo-guidance')
                 with gr.Row(elem_classes='nav-row'):
                     photo_next = continue_button('Continue to voice')
             with gr.Column(visible=False) as voice_step:
@@ -372,7 +431,7 @@ if __name__ == '__main__':
     app.queue(default_concurrency_limit=1).launch(
         server_name='127.0.0.1', server_port=int(os.environ.get('MUSE_UI_PORT', '7860')),
         theme=THEME, footer_links=[],
-        js=(ROOT / 'clipboard.js').read_text(),
+        js=(ROOT / 'studio.js').read_text(),
         css=(ROOT / 'studio.css').read_text(),
         allowed_paths=[str(OUTPUTS)],
     )

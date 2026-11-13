@@ -159,7 +159,7 @@ The interface does not impose a script length limit or delete old jobs automatic
 The queue allows one video job at a time, but other containers can still compete for GPU memory.
 
 To update the server, copy `backend.py`, `engine.py`, `photo_detail.py`, `mouth_restore.py`, `speech.py`, and `cosy_speech.py` into the runtime directory and recreate only the Compose `musetalk` service.
-To update the Mac, copy `webui.py`, `remote_client.py`, `clipboard.js`, and `studio.css` into its app directory and restart the local process.
+To update the Mac, copy `webui.py`, `remote_client.py`, `studio.js`, and `studio.css` into its app directory, delete the old `clipboard.js`, and restart the local process.
 The upstream `entrypoint.sh` is not used. The container starts `/workspace/backend.py`.
 
 ## Verify the split and photo preparation

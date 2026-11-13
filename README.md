@@ -7,6 +7,7 @@ The web app runs locally on your MacBook. It calls the NVIDIA server over HTTP t
 
 - Guide you through four steps: Photo, Voice, Script, and Video. A side panel shows your choices and tips for the current step.
 - Upload a photo. The page lists the photo requirements, shows photo dimensions, and flags small images.
+- Take a photo with the Mac camera. The live view shows a face guide. You can choose the camera and use a 3-second timer. Review the photo, then use it or take it again.
 - Choose the speech source. A cloned voice reads a typed script, and the video uses an uploaded recording as it is. A recording skips the Script step.
 - Stop you at a step, with a warning, when it is missing a photo, a recording, or a script.
 - Paste a photo or audio file from the clipboard. Hover over the target box, then press Command+V or Ctrl+V.
@@ -29,7 +30,7 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 | [remote_client.py](remote_client.py) | Uploads inputs to the server, forwards progress, and downloads finished videos. |
 | [backend.py](backend.py) | Queued generation API and speech-option validation. |
 | [engine.py](engine.py) | Server media preparation, speech subprocess, and video generation. |
-| [clipboard.js](clipboard.js) | Clipboard uploads, file replacement, and focus on hover. |
+| [studio.js](studio.js) | Clipboard uploads, file replacement, focus on hover, and the camera capture flow. |
 | [photo_detail.py](photo_detail.py) | Moves the photo detail with the generated face, so the beard and the lips stay sharp. |
 | [mouth_restore.py](mouth_restore.py) | Sharpens the lips and the inside of the mouth with GFPGAN detail. |
 | [patches/portrait-quality.patch](patches/portrait-quality.patch) | Calls `photo_detail.py` and `mouth_restore.py` from the upstream inference script, raises the video encoding quality, and avoids duplicate video encoding. |
@@ -73,6 +74,7 @@ Keep private recordings and generated output outside Git.
 The deployed source was tested with photo and audio uploads, native Mac clipboard paste, file replacement, hover focus, and video downloads.
 English and Arabic script generation also produced playable videos while a separate vLLM service remained running.
 CosyVoice cloning was verified through the local page with an uploaded reference, audio playback, video generation, and reference clipboard paste.
+A browser check with a simulated camera covered the camera states, the blocked camera message, and a video made from a camera photo.
 A browser check covered the four-step flow against the DGX: a voice preview, a video, another take, the recording path that skips the Script step, and the warnings for missing inputs.
 API validation, reference-duration boundaries, and file-transfer tests also passed. Run instructions are in the setup guide.
 A clean installation from this repository has not yet been tested.
