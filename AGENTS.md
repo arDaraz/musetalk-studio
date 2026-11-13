@@ -3,7 +3,7 @@
 ## Project structure
 
 - `webui.py` and `clipboard.js` implement the local Gradio interface. `remote_client.py` transfers files and calls the DGX API.
-- `backend.py` validates API requests. `engine.py` prepares media and coordinates speech and video generation.
+- `backend.py` validates API requests. `engine.py` prepares media and coordinates speech and video generation. `photo_detail.py` restores photo detail on the generated face. `mouth_restore.py` sharpens the lips and the inside of the mouth.
 - `speech.py` runs Chatterbox. `cosy_speech.py` runs CosyVoice in a separate Python environment.
 - `tests/` contains automated checks. `patches/` holds changes to pinned upstream engines. `docs/SETUP.md` and `docs/API.md` describe installation and API usage.
 - The ignored `runtime/` directory contains the upstream checkout, models, private media, and generated outputs. These assets are not bundled with this repository.
@@ -39,7 +39,7 @@ Use four-space indentation. Use `snake_case` for Python functions and variables,
 
 Use `unittest`, `unittest.mock`, `test_*.py` files, and `test_*` methods. No coverage threshold is configured. Add behavioral checks for changed validation, file transfer, and media preparation.
 
-Run voice-cloning tests in the UI environment, CosyVoice tests in `/opt/cosyvoice`, and mouth-blending tests in the inference environment. Follow the environment-specific commands in `docs/SETUP.md`. For UI or generation changes, verify upload, generation, playback, and download in a browser.
+Run voice-cloning tests in the UI environment, CosyVoice tests in `/opt/cosyvoice`, and photo-detail tests in the inference environment. Follow the environment-specific commands in `docs/SETUP.md`. For UI or generation changes, verify upload, generation, playback, and download in a browser.
 
 ## Commits and pull requests
 

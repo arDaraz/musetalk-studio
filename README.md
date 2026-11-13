@@ -5,7 +5,7 @@ The web app runs locally on your MacBook. It calls the NVIDIA server over HTTP t
 
 ## What the page does
 
-- Upload a photo and an audio recording. The page shows photo dimensions and flags small images.
+- Upload a photo and an audio recording. The page lists the photo requirements, shows photo dimensions, and flags small images.
 - Paste a photo or audio file from the clipboard. Hover over the target box, then press Command+V or Ctrl+V.
 - Show a purple outline when a media box has hover or focus.
 - Replace an uploaded file by pasting another file.
@@ -24,7 +24,9 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 | [backend.py](backend.py) | Queued generation API and speech-option validation. |
 | [engine.py](engine.py) | Server media preparation, speech subprocess, and video generation. |
 | [clipboard.js](clipboard.js) | Clipboard uploads, file replacement, and focus on hover. |
-| [patches/portrait-quality.patch](patches/portrait-quality.patch) | Preserves the beard outside the mouth region and avoids duplicate video encoding. |
+| [photo_detail.py](photo_detail.py) | Moves the photo detail with the generated face, so the beard and the lips stay sharp. |
+| [mouth_restore.py](mouth_restore.py) | Sharpens the lips and the inside of the mouth with GFPGAN detail. |
+| [patches/portrait-quality.patch](patches/portrait-quality.patch) | Calls `photo_detail.py` and `mouth_restore.py` from the upstream inference script, raises the video encoding quality, and avoids duplicate video encoding. |
 | [speech.py](speech.py) | Chatterbox speech generation from a reference voice. |
 | [cosy_speech.py](cosy_speech.py) | CosyVoice speech generation with automatic reference transcription. |
 | [Dockerfile.cosyvoice](Dockerfile.cosyvoice) | Isolated CosyVoice environment on the NVIDIA ARM64 server. |
@@ -70,5 +72,5 @@ A clean installation from this repository has not yet been tested.
 
 ## Third-party terms
 
-MuseTalk, Chatterbox, CosyVoice, the NVIDIA base image, and downloaded models retain their own licenses and terms.
+MuseTalk, Chatterbox, CosyVoice, GFPGAN, the NVIDIA base image, and downloaded models retain their own licenses and terms.
 Review the upstream terms before redistributing those components or their weights.

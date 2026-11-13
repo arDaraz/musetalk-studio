@@ -6,3 +6,5 @@ RUN git clone --recursive https://github.com/QwenAudio/CosyVoice.git /opt/CosyVo
 COPY patches/cosyvoice-audio.patch /tmp/cosyvoice-audio.patch
 RUN git -C /opt/CosyVoice apply --check /tmp/cosyvoice-audio.patch && git -C /opt/CosyVoice apply /tmp/cosyvoice-audio.patch
 RUN /opt/cosyvoice/bin/python -m pip uninstall -y chatterbox-tts && /opt/cosyvoice/bin/python -m pip install --no-cache-dir gdown==5.1.0 wget==3.2
+# Without --no-deps, pip can replace the NVIDIA build of PyTorch in the inference environment.
+RUN /usr/bin/python -m pip install --no-cache-dir --no-deps spandrel==0.4.2
