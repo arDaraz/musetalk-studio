@@ -11,12 +11,12 @@ git clone https://github.com/TMElyralab/MuseTalk.git "$STUDIO_DIR/runtime"
 git -C "$STUDIO_DIR/runtime" checkout 0a89dec45a0192b824e3cf4daf96c239440c5ed8
 git -C "$STUDIO_DIR/runtime" apply --check --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
 git -C "$STUDIO_DIR/runtime" apply --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
-cp "$STUDIO_DIR/backend.py" "$STUDIO_DIR/engine.py" "$STUDIO_DIR/speech.py" "$STUDIO_DIR/cosy_speech.py" "$STUDIO_DIR/runtime/"
+cp "$STUDIO_DIR/backend.py" "$STUDIO_DIR/engine.py" "$STUDIO_DIR/photo_detail.py" "$STUDIO_DIR/speech.py" "$STUDIO_DIR/cosy_speech.py" "$STUDIO_DIR/runtime/"
 ```
 
 The application uses `/workspace` inside the container. Compose mounts the runtime directory at that path.
 The upstream checkout supplies `scripts/inference.py` and the `musetalk` package.
-The patch limits generated pixels to an expanded mouth region and preserves the encoded video stream when adding audio. Apply it once to the pinned upstream revision.
+The patch makes `scripts/inference.py` call `photo_detail.py` for a single photo and keeps the encoded video stream when it adds audio. Apply it once to the pinned upstream revision.
 
 ## Build the images
 
@@ -144,13 +144,15 @@ The job directory also contains `render.log` and, for script mode, the submitted
 
 Use the original full-resolution portrait with one visible face. The page shows its dimensions and flags images with a side smaller than 512 pixels.
 Preparation preserves RGB pixels and image dimensions, adding at most one pixel of padding per side for video encoding.
-MuseTalk still generates a 256 by 256 face region. The app blends an expanded mouth region into the original photo to preserve the surrounding beard and chin.
-Lip details can still change, and the fixed portrait does not gain natural head or jaw movement.
+MuseTalk repaints the lower half of the face at 256 by 256 pixels, which softens beard and skin texture.
+`photo_detail.py` restores the photo detail on each pixel that stays still. It keeps the generated pixels where the mouth and jaw move.
+The lips, the teeth, and the moving part of the chin stay as soft as the model output. The head does not move.
+A face smaller than 256 pixels gives the model little mouth detail, so the lips look less exact.
 Start with a short clip to check memory use alongside other GPU services.
 The interface does not impose a script length limit or delete old jobs automatically.
 The queue allows one video job at a time, but other containers can still compete for GPU memory.
 
-To update the server, copy `backend.py`, `engine.py`, `speech.py`, and `cosy_speech.py` into the runtime directory and recreate only the Compose `musetalk` service.
+To update the server, copy `backend.py`, `engine.py`, `photo_detail.py`, `speech.py`, and `cosy_speech.py` into the runtime directory and recreate only the Compose `musetalk` service.
 To update the Mac, copy `webui.py`, `remote_client.py`, and `clipboard.js` into its app directory and restart the local process.
 The upstream `entrypoint.sh` is not used. The container starts `/workspace/backend.py`.
 
@@ -169,25 +171,26 @@ Run the checks in the web image with the upstream runtime and this repository mo
 docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -w /studio -e PYTHONPATH=/studio musetalk:cosyvoice /opt/web/bin/python -m unittest discover -s /studio/tests -p test_photo_quality.py -v
 ```
 
+The tests compare decoded RGB pixels with the original photo and check odd dimensions, large photos, and the small-image guidance.
+
 Run the CosyVoice prompt tests in its speech environment.
 
 ```bash
 docker run --rm -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/studio:/opt/CosyVoice:/opt/CosyVoice/third_party/Matcha-TTS musetalk:cosyvoice env -u LD_LIBRARY_PATH /opt/cosyvoice/bin/python -m unittest discover -s /studio/tests -p test_cosy_speech.py -v
 ```
 
-Run the mouth-mask tests in the inference environment.
+Run the photo-detail tests in the inference environment.
 
 ```bash
-docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/workspace:/workspace/musetalk/utils musetalk:cosyvoice /usr/bin/python -m unittest discover -s /studio/tests -p test_mouth_blending.py -v
+docker run --rm -v "$STUDIO_DIR/runtime:/workspace" -v "$STUDIO_DIR:/studio:ro" -e PYTHONPATH=/studio musetalk:cosyvoice /usr/bin/python -m unittest discover -s /studio/tests -p test_photo_detail.py -v
 ```
 
-The tests compare decoded RGB pixels with the original photo and check odd dimensions, large photos, and the small-image guidance.
-For an existing installation, apply the portrait patch before restarting the web service.
-If the earlier video-copy patch is already installed, apply only the face-parsing change.
+To upgrade an installation with an earlier portrait patch, restore the two upstream files and apply the current patch. Then restart the service.
 
 ```bash
-git -C "$STUDIO_DIR/runtime" apply --check --unidiff-zero --include="musetalk/utils/face_parsing/__init__.py" "$STUDIO_DIR/patches/portrait-quality.patch"
-git -C "$STUDIO_DIR/runtime" apply --unidiff-zero --include="musetalk/utils/face_parsing/__init__.py" "$STUDIO_DIR/patches/portrait-quality.patch"
+git -C "$STUDIO_DIR/runtime" checkout 0a89dec45a0192b824e3cf4daf96c239440c5ed8 -- scripts/inference.py musetalk/utils/face_parsing/__init__.py
+git -C "$STUDIO_DIR/runtime" apply --check --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
+git -C "$STUDIO_DIR/runtime" apply --unidiff-zero "$STUDIO_DIR/patches/portrait-quality.patch"
 ```
 
 If the patch check reports a mismatch, inspect the upstream revision and whether the patch is already present.

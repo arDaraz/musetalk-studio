@@ -1,16 +1,12 @@
 --- a/scripts/inference.py
 +++ b/scripts/inference.py
-@@ -235 +235 @@
+@@ -21,0 +22 @@
++from photo_detail import keep_photo_detail
+@@ -209,0 +211,4 @@
++            if len(frame_list) == 1:
++                x1, y1, x2, y2 = coord_list[0]
++                y2 = min(y2 + args.extra_margin, frame_list[0].shape[0])
++                res_frame_list = keep_photo_detail(res_frame_list, frame_list[0][y1:y2, x1:x2])
+@@ -235 +240 @@
 -            cmd_combine_audio = f"ffmpeg -y -v warning -i {audio_path} -i {temp_vid_path} {output_vid_name}"
 +            cmd_combine_audio = f"ffmpeg -y -v warning -i {audio_path} -i {temp_vid_path} -map 1:v:0 -map 0:a:0 -c:v copy -c:a aac -movflags +faststart {output_vid_name}"
---- a/musetalk/utils/face_parsing/__init__.py
-+++ b/musetalk/utils/face_parsing/__init__.py
-@@ -93 +93,7 @@
--            if mode == "neck":
-+            if mode == "mouth":
-+                mouth_region = np.isin(parsing, [11, 12, 13]).astype(np.uint8) * 255
-+                if not mouth_region.any():
-+                    raise ValueError("No mouth found in the portrait. Use a clear, front-facing photo.")
-+                mouth_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (31, 31))
-+                parsing = cv2.dilate(mouth_region, mouth_kernel, iterations=1)
-+            elif mode == "neck":

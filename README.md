@@ -24,7 +24,8 @@ Clipboard support depends on the browser providing an actual media file. Pasted 
 | [backend.py](backend.py) | Queued generation API and speech-option validation. |
 | [engine.py](engine.py) | Server media preparation, speech subprocess, and video generation. |
 | [clipboard.js](clipboard.js) | Clipboard uploads, file replacement, and focus on hover. |
-| [patches/portrait-quality.patch](patches/portrait-quality.patch) | Preserves the beard outside the mouth region and avoids duplicate video encoding. |
+| [photo_detail.py](photo_detail.py) | Restores photo detail where the generated face stays still. |
+| [patches/portrait-quality.patch](patches/portrait-quality.patch) | Calls `photo_detail.py` from the upstream inference script and avoids duplicate video encoding. |
 | [speech.py](speech.py) | Chatterbox speech generation from a reference voice. |
 | [cosy_speech.py](cosy_speech.py) | CosyVoice speech generation with automatic reference transcription. |
 | [Dockerfile.cosyvoice](Dockerfile.cosyvoice) | Isolated CosyVoice environment on the NVIDIA ARM64 server. |
