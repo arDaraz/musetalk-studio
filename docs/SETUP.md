@@ -16,7 +16,7 @@ cp "$STUDIO_DIR/backend.py" "$STUDIO_DIR/engine.py" "$STUDIO_DIR/photo_detail.py
 
 The application uses `/workspace` inside the container. Compose mounts the runtime directory at that path.
 The upstream checkout supplies `scripts/inference.py` and the `musetalk` package.
-The patch makes `scripts/inference.py` call `photo_detail.py` for a single photo and keeps the encoded video stream when it adds audio. Apply it once to the pinned upstream revision.
+The patch makes `scripts/inference.py` call `photo_detail.py` for a single photo, encodes the video at a higher quality, and keeps the encoded video stream when it adds audio. Apply it once to the pinned upstream revision.
 
 ## Build the images
 
@@ -145,8 +145,8 @@ The job directory also contains `render.log` and, for script mode, the submitted
 Use the original full-resolution portrait with one visible face. The page shows its dimensions and flags images with a side smaller than 512 pixels.
 Preparation preserves RGB pixels and image dimensions, adding at most one pixel of padding per side for video encoding.
 MuseTalk repaints the lower half of the face at 256 by 256 pixels, which softens beard and skin texture.
-`photo_detail.py` restores the photo detail on each pixel that stays still. It keeps the generated pixels where the mouth and jaw move.
-The lips, the teeth, and the moving part of the chin stay as soft as the model output. The head does not move.
+`photo_detail.py` measures how each part of the generated face moves and moves the photo detail with it. The beard, the skin, and the lips stay as sharp as the photo while the mouth moves.
+The inside of an open mouth, which includes the teeth, stays as soft as the model output. The head does not move.
 A face smaller than 256 pixels gives the model little mouth detail, so the lips look less exact.
 Start with a short clip to check memory use alongside other GPU services.
 The interface does not impose a script length limit or delete old jobs automatically.
