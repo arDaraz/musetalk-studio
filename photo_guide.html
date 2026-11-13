@@ -1,0 +1,83 @@
+<svg class="photo-guide-shapes" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="guide-blur"><feGaussianBlur stdDeviation="2.6"/></filter>
+    <g id="guide-face">
+      <circle cx="27" cy="46" r="4" fill="#F0997B"/>
+      <circle cx="73" cy="46" r="4" fill="#F0997B"/>
+      <path d="M8 100Q8 80 50 77Q92 80 92 100Z" fill="#185FA5"/>
+      <rect x="42" y="62" width="16" height="18" fill="#F0997B"/>
+      <ellipse cx="50" cy="44" rx="22" ry="27" fill="#F5C4B3"/>
+      <path d="M27 42Q26 14 50 14Q74 14 73 42Q68 27 50 26Q32 27 27 42Z" fill="#4A1B0C"/>
+      <circle cx="41" cy="43" r="2.4" fill="#2C2C2A"/>
+      <circle cx="59" cy="43" r="2.4" fill="#2C2C2A"/>
+      <path d="M50 46L47 55H52" fill="none" stroke="#D85A30" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M42 62Q50 66 58 62" fill="none" stroke="#993C1D" stroke-width="2.2" stroke-linecap="round"/>
+    </g>
+    <g id="guide-yes">
+      <circle cx="86" cy="14" r="9" fill="#1D9E75"/>
+      <path d="M81.5 14.5L85 18L91 10.5" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g id="guide-no">
+      <circle cx="86" cy="14" r="9" fill="#E24B4A"/>
+      <path d="M82 10L90 18M90 10L82 18" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
+    </g>
+  </defs>
+</svg>
+<div class="photo-guide">
+  <div class="photo-guide-good">
+    <svg viewBox="0 0 100 100" role="img" aria-label="Good example: a sharp front view of one face with the mouth closed">
+      <use href="#guide-face"/>
+      <use href="#guide-yes"/>
+    </svg>
+    {tips}
+  </div>
+  <p class="photo-guide-title">Avoid these</p>
+  <div class="photo-guide-faults">
+    <figure>
+      <svg viewBox="0 0 100 100" role="img" aria-label="Example to avoid: a small face in a large photo">
+        <use href="#guide-face" transform="translate(35 34) scale(.3)"/>
+        <use href="#guide-no"/>
+      </svg>
+      <figcaption>Face too small</figcaption>
+    </figure>
+    <figure>
+      <svg viewBox="0 0 100 100" role="img" aria-label="Example to avoid: a blurred face">
+        <g filter="url(#guide-blur)"><use href="#guide-face"/></g>
+        <use href="#guide-no"/>
+      </svg>
+      <figcaption>Blurry or a screenshot</figcaption>
+    </figure>
+    <figure>
+      <svg viewBox="0 0 100 100" role="img" aria-label="Example to avoid: a face with a mask over the mouth">
+        <use href="#guide-face"/>
+        <path d="M29 52Q50 45 71 52L68 68Q50 79 32 68Z" fill="#B5D4F4" stroke="#85B7EB"/>
+        <use href="#guide-no"/>
+      </svg>
+      <figcaption>Mouth covered</figcaption>
+    </figure>
+    <figure>
+      <svg viewBox="0 0 100 100" role="img" aria-label="Example to avoid: a face with an open mouth">
+        <use href="#guide-face"/>
+        <ellipse cx="50" cy="63" rx="8" ry="6" fill="#4A1B0C"/>
+        <rect x="44" y="58.5" width="12" height="3" rx="1" fill="#F1EFE8"/>
+        <use href="#guide-no"/>
+      </svg>
+      <figcaption>Mouth open</figcaption>
+    </figure>
+    <figure>
+      <svg viewBox="0 0 100 100" role="img" aria-label="Example to avoid: a head tilted to one side">
+        <use href="#guide-face" transform="rotate(20 50 44)"/>
+        <use href="#guide-no"/>
+      </svg>
+      <figcaption>Head tilted</figcaption>
+    </figure>
+    <figure>
+      <svg viewBox="0 0 100 100" role="img" aria-label="Example to avoid: two faces in one photo">
+        <use href="#guide-face" transform="translate(-8 26) scale(.62)"/>
+        <use href="#guide-face" transform="translate(46 26) scale(.62)"/>
+        <use href="#guide-no"/>
+      </svg>
+      <figcaption>More than one face</figcaption>
+    </figure>
+  </div>
+</div>
