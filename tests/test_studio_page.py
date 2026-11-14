@@ -80,6 +80,13 @@ class StudioPageTests(unittest.TestCase):
             self.assertEqual(webui.continue_from_script(page_request(script_input='  ')), {})
         self.assertEqual(warning.call_count, 4)
 
+    def test_only_the_photo_step_shows_the_photo_examples(self):
+        photo_tips = webui.tips_html(webui.PHOTO)
+        self.assertIn('class="photo-guide-faults"', photo_tips)
+        self.assertIn('<li>Keep the head upright.</li>', photo_tips)
+        self.assertNotIn('{tips}', photo_tips)
+        self.assertNotIn('photo-guide', webui.tips_html(webui.VOICE))
+
     def test_summary_escapes_user_text(self):
         summary = webui.summary_html(page_request(script_input='<b>Hi</b>'))
         self.assertIn('&lt;b&gt;Hi&lt;/b&gt;', summary)

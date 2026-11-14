@@ -13,10 +13,11 @@ WORDS_PER_SECOND = 2.5
 STEP_TITLES = ('Photo', 'Voice', 'Script', 'Video')
 PHOTO, VOICE, SCRIPT, VIDEO = range(len(STEP_TITLES))
 ENGINE_NAMES = {'chatterbox': 'Chatterbox', 'cosyvoice': 'CosyVoice 3'}
+PHOTO_GUIDE = (ROOT / 'photo_guide.html').read_text()
 STEP_TIPS = (
     ('For the best video', [
-        'Use the original photo, not a screenshot.', 'Show one face that looks at the camera.',
-        'Use even light on the face.', 'Keep the mouth closed and not covered.',
+        'Use the sharp original photo, not a screenshot.', 'Show one face that looks at the camera.',
+        'Keep the head upright.', 'Keep the mouth closed and not covered.',
         'Make the face at least 256 pixels wide.',
     ]),
     ('For a clear cloned voice', [
@@ -171,7 +172,10 @@ def summary_html(request):
 def tips_html(step):
     title, tips = STEP_TIPS[step]
     items = ''.join(f'<li>{tip}</li>' for tip in tips)
-    return f'<h2 class="aside-title">{title}</h2><ul class="tips">{items}</ul>'
+    tip_list = f'<ul class="tips">{items}</ul>'
+    if step == PHOTO:
+        tip_list = PHOTO_GUIDE.replace('{tips}', tip_list)
+    return f'<h2 class="aside-title">{title}</h2>{tip_list}'
 
 
 def go_to(request, step):

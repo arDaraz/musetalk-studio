@@ -367,6 +367,59 @@
     line-height: 1.5;
 }
 
+.photo-guide-shapes {
+    position: absolute;
+}
+
+.photo-guide svg {
+    display: block;
+    width: 100%;
+    border-radius: 12px;
+    background: #D3D1C7;
+}
+
+.photo-guide-good {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin: 12px 0 18px;
+}
+
+.photo-guide-good svg {
+    flex: none;
+    width: 120px;
+    outline: 2px solid #1D9E75;
+}
+
+.photo-guide-good .tips {
+    flex: 1;
+    min-width: 180px;
+}
+
+.photo-guide-title {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.photo-guide-faults {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    max-width: 420px;
+}
+
+.photo-guide figure {
+    margin: 0;
+}
+
+.photo-guide figcaption {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
 .warn {
     margin: 0;
     padding: 12px 14px;

@@ -145,8 +145,9 @@ Each server job writes to `results/web/<job-id>/`. The output video is `v15/vide
 The Mac downloads generated audio and videos to `~/Library/Application Support/MuseTalk Studio/results/`, or the directory in `MUSE_OUTPUT_DIR`.
 The job directory also contains `render.log` and, for script mode, the submitted script, normalized reference recording, and generated speech.
 
-Use the original full-resolution portrait with one visible face that looks at the camera, in even light, with the mouth closed and nothing over it.
-The page lists these requirements, shows the photo dimensions, and flags images with a side smaller than 512 pixels.
+Use a sharp original portrait with one face that looks at the camera. Keep the head upright, the mouth closed, and nothing over the mouth.
+A blurred photo, a screenshot, an open mouth, a tilted head, or a covered mouth gives soft or wrong lips. With two faces, only one face moves.
+The side panel of the photo step shows these rules with drawn examples. The page shows the photo dimensions and flags images with a side smaller than 512 pixels.
 Preparation preserves the RGB pixels of a photo whose shorter side is at least 720 pixels, adding at most one pixel of padding per side for video encoding.
 Preparation enlarges a smaller photo by a whole factor until its shorter side is at least 720 pixels. The enlarged frame keeps more of the mouth that MuseTalk paints, but it adds no detail to the photo.
 MuseTalk repaints the lower half of the face at 256 by 256 pixels, which softens beard and skin texture.
@@ -159,7 +160,7 @@ The interface does not impose a script length limit or delete old jobs automatic
 The queue allows one video job at a time, but other containers can still compete for GPU memory.
 
 To update the server, copy `backend.py`, `engine.py`, `photo_detail.py`, `mouth_restore.py`, `speech.py`, and `cosy_speech.py` into the runtime directory and recreate only the Compose `musetalk` service.
-To update the Mac, copy `webui.py`, `remote_client.py`, `clipboard.js`, and `studio.css` into its app directory and restart the local process.
+To update the Mac, copy `webui.py`, `remote_client.py`, `clipboard.js`, `studio.css`, and `photo_guide.html` into its app directory and restart the local process.
 The upstream `entrypoint.sh` is not used. The container starts `/workspace/backend.py`.
 
 ## Verify the split and photo preparation
